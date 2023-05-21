@@ -6,13 +6,13 @@ from plexapi.audio import Track
 
 
 class Downloader:
-    def __init__(self, server: PlexServer, path: str, playlists_path: str, thread=4) -> None:
+    def __init__(self, server: PlexServer, path: str, playlists_path: str, threads=4) -> None:
 
         self.server = server
         self.playlists = self.server.playlists(playlistType='audio')
         self.path = os.path.expanduser(os.path.join(path))
         self.playlists_path = os.path.expanduser(os.path.join(playlists_path))
-        self.pool = ThreadPoolExecutor(thread)
+        self.pool = ThreadPoolExecutor(max_workers=threads)
         self.tasks = []
 
     def get_playlists(self) -> list:
