@@ -209,3 +209,11 @@ def ignore(ctx, indices=[]) -> None:
     ctx.obj["config"]["playlists"]["saved"] = saved
     ctx.obj["config"]["playlists"]["ignored"] = ignored
     ctx.obj["save"]()
+
+
+@cli.command()
+@ click.pass_context
+def config(ctx):
+    """Show config"""
+    click.echo(f"Configuration file is located at {ctx.obj['config_file']}")
+    click.echo(ctx.obj["config"])
