@@ -13,7 +13,6 @@ class Downloader:
         self.path = os.path.expanduser(os.path.join(path))
         self.playlists_path = os.path.expanduser(os.path.join(playlists_path))
         self.pool = ThreadPoolExecutor(max_workers=threads)
-        self.tasks = []
 
     def get_playlists(self) -> list:
         if self.playlists is None:
@@ -59,8 +58,9 @@ class Downloader:
 
     def download(self, playlist: Playlist, overwrite=False) -> list:
 
+        tasks = []
         for track in playlist.items():
             future = self.pool.submit(self.__download_track, track, overwrite)
-            self.tasks.append(future)
+            tasks.append(future)
         self.pool.submit(self.dump_m3u8, playlist)
-        return self.tasks
+        return tasks
