@@ -41,7 +41,7 @@ Enter number of download threads [4]:
 The next step consists in listing your playlists:
 
 ```console
-plex2mix list
+$ plex2mix list
 0: ❤️ Tracks
 1: All Music
 2: Bad
@@ -91,9 +91,8 @@ Commands:
 
 ## Configuration
 
-Most of the information provided on the first execution can be changed by editing the `config.yaml` located under `~/.config/plex2mix/` and under the default location on other operating systems.
+Most of the information provided on the first execution can be changed by editing the `config.yaml` located under `~/.config/plex2mix/` on Linux and under the default location on other operating systems.
 
 ## Playlists information
 
-Your playlists are downloaded under the specified path and the `m3u8` dumps in the `playlists` subfolder by default. This option can also be changed in the configuration file.
-
+Your playlists are downloaded under the specified path. By default, the `m3u8` dumps are stored in the `playlists` subfolder. This option can also be changed in the configuration file.
