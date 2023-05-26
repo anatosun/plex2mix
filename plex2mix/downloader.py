@@ -44,14 +44,15 @@ class Downloader:
         return album_path, filepath
 
     def dump_m3u8(self, playlist: Playlist) -> None:
-        m3u8 = "#EXTM3U\n"
-        m3u8 += f"#PLAYLIST:{playlist.title}\n"
-        track: Track
+        path = os.path.join(self.playlists_path,
+                            f"{playlist.title}.m3u8")
+        f = open(path, "w", encoding="utf-8")
+        f.write("#EXTM3u\n")
         for track in playlist.items():
-            _, filepath = self.__path(track)
-            m3u8 += f"#EXTINF:{track.duration // 1000},{track.grandparentTitle} - {track.title}\n#EXT-X-RATING:{track.userRating if track.userRating is not None else 0}\n{filepath}\n"
-        with open(os.path.join(self.playlists_path, f"{playlist.title}.m3u8"), "w") as f:
-            f.write(m3u8)
+            if track.duration and track.grandparentTitle and track.parentTitle is not None:
+                _, filepath = self.__path(track)
+                m3u8 = f"#EXTINF:{track.duration // 1000},{track.grandparentTitle} - {track.title}\n#EXT-X-RATING:{track.userRating if track.userRating is not None else 0}\n{filepath}\n"
+                f.write(m3u8)
 
     def futures(self):
         return self.futures
