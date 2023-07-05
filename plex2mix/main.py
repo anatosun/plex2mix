@@ -13,7 +13,6 @@ from plex2mix.downloader import Downloader
 @ click.pass_context
 def cli(ctx) -> None:
     """plex2mix"""
-
     ctx.ensure_object(dict)
     ctx.obj["config"] = {}
     ctx.obj["config_file"] = f"{os.path.join(click.get_app_dir('plex2mix'), 'config.yaml')}"
@@ -47,6 +46,7 @@ def cli(ctx) -> None:
                 ctx.obj["config"]["server"]["url"], ctx.obj["config"]["token"])
         except:
             click.echo("Could not connect to server", err=True)
+            click.echo(f"Check your configuration at {ctx.obj['config_file']}")
             exit(1)
     ctx.obj["server"] = server
     if ctx.obj["config"].get("path") is None:
