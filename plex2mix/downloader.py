@@ -40,9 +40,9 @@ class Downloader:
         return filepath
 
     def __path(self, track: Track) -> tuple:
-        artist, album = track.grandparentTitle, track.parentTitle
-        album_path = os.path.join(self.path, artist, album)
-        _, file = os.path.split(track.media[0].parts[0].file)
+        artist,  = track.grandparentTitle, track.parentTitle
+        album_path = os.path.join(self.path, __normalize(artist), __normalize(album))
+        _, file = os.path.split(__normalize(track.media[0].parts[0].file))
         filepath = os.path.join(album_path, file)
         return album_path, filepath
 
@@ -68,3 +68,10 @@ class Downloader:
             tasks.append(future)
         self.pool.submit(self.dump_m3u8, playlist)
         return tasks
+
+    def __normalize(self, path: str):
+            path = unicodedata.normalize('NFKC', path)
+            path = unicodedata.normalize('NFKD', path).encode(
+                'ascii', 'ignore').decode('ascii')
+            path = re.sub(r'[^\w\s-]', '', path)
+            return path
