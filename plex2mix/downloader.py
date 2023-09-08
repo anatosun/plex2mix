@@ -13,6 +13,7 @@ class Downloader:
         self.path = os.path.expanduser(os.path.join(path))
         self.playlists_path = os.path.expanduser(os.path.join(playlists_path))
         self.pool = ThreadPoolExecutor(max_workers=threads)
+        self.downloadedTracks = []
 
     def get_playlists(self) -> list:
         if self.playlists is None:
@@ -33,6 +34,8 @@ class Downloader:
                 overwrite = False
         else:
             track.download(album_path, keep_original_name=True)
+
+        self.downloadedTracks.append(filepath)
 
         return filepath
 
