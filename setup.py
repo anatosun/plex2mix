@@ -11,6 +11,7 @@ setup(
     include_package_data=True,
     install_requires=[
         'Click',
+        'click-aliases',
         'PlexAPI',
         'PyYAML',
     ],

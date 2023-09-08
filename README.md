@@ -47,16 +47,16 @@ $ plex2mix list
 2: Bad
 ```
 
-You can thereafter pick the ones you wish to download by providing their indices:
+You can thereafter pick the ones you wish to enable by providing their indices:
 
 ```bash
-plex2mix download 0 1
+plex2mix enable 0 1
 ```
 
-You can also choose to download all the playlists on your server:
+You can also choose to enable all the playlists on your server:
 
 ```bash
-plex2mix download --all
+plex2mix enable --all
 ```
 
 Now, if you want to exclude a playlist from the above command you can ignore it:
@@ -65,11 +65,14 @@ Now, if you want to exclude a playlist from the above command you can ignore it:
 plex2mix ignore 2
 ```
 
-At some point, if you modified your playlists on the server you might want to update them locally, this is done with a refresh.
+At some point, you can download playlists and track with:
 
 ```bash
-plex2mix refresh
+plex2mix download
+plex2mix refresh # is an alias to download
 ```
+
+*if you modified your playlists on the server you might want to update them locally, just relaunch this command.*
 
 If you want clear unmapped tracks in downloaded playlists, you can use clear flag
 
@@ -89,10 +92,10 @@ Options:
   --help  Show this message and exit.
 
 Commands:
-  download  Download playlists
+  enable    Enable playlists
   ignore    Ignore playlists
   list      List playlists
-  refresh   Refresh playlists
+  download|refresh   Download playlists (or refresh)
 ```
 
 ## Configuration

@@ -4,12 +4,13 @@ import os
 import click
 import yaml
 import time
+from click_aliases import ClickAliasedGroup
 from plexapi.myplex import MyPlexPinLogin, MyPlexAccount
 from plexapi.server import PlexServer
 from plex2mix.downloader import Downloader
 
 
-@ click.group()
+@ click.group(cls=ClickAliasedGroup)
 @ click.pass_context
 def cli(ctx) -> None:
     """plex2mix"""
@@ -129,33 +130,26 @@ def list(ctx) -> None:
 
 @ cli.command()
 @ click.argument('indices',  nargs=-1, type=int)
-@ click.option('-a', '--all', 'download_all', is_flag=True, help='Download all playlists')
-@click.option('-o', '--overwrite', is_flag=True, help='Overwrite existing files')
+@ click.option('-a', '--all', 'enable_all', is_flag=True, help='Enable all playlists')
 @ click.pass_context
-def download(ctx, indices=[], download_all=False, overwrite=False) -> None:
-    """Download playlists"""
-    path = ctx.obj["config"]["path"]
-    click.echo(f"Downloading to {path}")
+def enable(ctx, indices=[], enable_all=False) -> None:
+    """Enable playlists to saved"""
     playlists = ctx.obj["downloader"].get_playlists()
     saved, ignored = ctx.obj["config"]["playlists"]["saved"], ctx.obj["config"]["playlists"]["ignored"]
-    downloader = ctx.obj["downloader"]
 
-    if download_all:
+    if enable_all:
         indices = range(len(playlists))
 
     if len(indices) == 0:
         i = -1
         while i < 0 or i > len(playlists):
-            i = click.prompt("Select playlist to download",
+            i = click.prompt("Select playlist to enable",
                              default=0, show_default=False, type=int, show_choices=False, prompt_suffix=f" [0-{len(playlists)-1}]: ")
 
         indices = [i]
 
     for i in indices:
         playlist = playlists[i]
-        if playlist.ratingKey in ignored:
-            continue
-        t = downloader.download(playlist, overwrite=overwrite)
         if playlist.ratingKey not in saved:
             saved.append(playlist.ratingKey)
         if playlist.ratingKey in ignored:
@@ -163,18 +157,15 @@ def download(ctx, indices=[], download_all=False, overwrite=False) -> None:
         ctx.obj["config"]["playlists"]["saved"] = saved
         ctx.obj["config"]["playlists"]["ignored"] = ignored
         ctx.obj["save"]()
-        with click.progressbar(as_completed(t), length=len(t), label=playlist.title) as bar:
-            for _ in bar:
-                pass
 
-
-@ cli.command()
-@ click.option('-f', '--force', is_flag=True, help='Force refresh')
+@ cli.command(aliases=['refresh'])
+@click.option('-f', '--force', is_flag=True, help='Force refresh')
 @ click.option('-c', '--clear', is_flag=True, help='Clear unmapped tracks')
 @ click.pass_context
-def refresh(ctx, force=False) -> None:
-    """Refresh playlists"""
-    click.echo("Refresh playlists")
+def download(ctx, force=False) -> None:
+    """Download playlists (or refresh)"""
+    configPath = ctx.obj["config"]["path"]
+    click.echo(f"Download playlists (or refresh) to {configPath}")
     playlists = ctx.obj["downloader"].get_playlists()
     saved = ctx.obj["config"]["playlists"]["saved"]
     downloader = ctx.obj["downloader"]
