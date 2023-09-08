@@ -1,5 +1,7 @@
 from concurrent.futures import ThreadPoolExecutor
 import os
+import re
+import unicodedata
 from plexapi.server import PlexServer
 from plexapi.playlist import Playlist
 from plexapi.audio import Track
@@ -40,9 +42,10 @@ class Downloader:
         return filepath
 
     def get_path(self, track: Track) -> tuple:
-        artist,  = track.grandparentTitle, track.parentTitle
-        album_path = os.path.join(self.path, __normalize(artist), __normalize(album))
-        _, file = os.path.split(__normalize(track.media[0].parts[0].file))
+        artist, album = track.grandparentTitle, track.parentTitle
+        album_path = os.path.join(
+            self.path, self.__normalize(artist), self.__normalize(album))
+        _, file = os.path.split(self.__normalize(track.media[0].parts[0].file))
         filepath = os.path.join(album_path, file)
         return album_path, filepath
 
@@ -71,8 +74,8 @@ class Downloader:
         return tasks
 
     def __normalize(self, path: str):
-            path = unicodedata.normalize('NFKC', path)
-            path = unicodedata.normalize('NFKD', path).encode(
-                'ascii', 'ignore').decode('ascii')
-            path = re.sub(r'[^\w\s-]', '', path)
-            return path
+        path = unicodedata.normalize('NFKC', path)
+        path = unicodedata.normalize('NFKD', path).encode(
+            'ascii', 'ignore').decode('ascii')
+        path = re.sub(r'[^\w\s-]', '', path)
+        return path
