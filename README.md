@@ -80,6 +80,8 @@ If you want clear unmapped tracks in downloaded playlists, you can use clear fla
 plex2mix refresh --clear
 ```
 
+if you modified your playlists on the server you might want to update them locally, just relaunch this command.
+
 For any assistance you can query the help section:
 
 ```console

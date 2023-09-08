@@ -26,7 +26,7 @@ class Downloader:
         return [p.title for p in self.playlists]
 
     def __download_track(self, track: Track,  overwrite=False) -> str:
-        album_path, filepath = self.__path(track)
+        album_path, filepath = self.get_path(track)
         size_on_server = track.media[0].parts[0].size
         if os.path.exists(filepath):
             while overwrite or size_on_server > os.path.getsize(filepath):
@@ -39,7 +39,7 @@ class Downloader:
 
         return filepath
 
-    def __path(self, track: Track) -> tuple:
+    def get_path(self, track: Track) -> tuple:
         artist,  = track.grandparentTitle, track.parentTitle
         album_path = os.path.join(self.path, __normalize(artist), __normalize(album))
         _, file = os.path.split(__normalize(track.media[0].parts[0].file))
@@ -47,13 +47,14 @@ class Downloader:
         return album_path, filepath
 
     def dump_m3u8(self, playlist: Playlist) -> None:
+        title = playlist.title.strip()
         path = os.path.join(self.playlists_path,
-                            f"{playlist.title}.m3u8")
+                            f"{title}.m3u8")
         f = open(path, "w", encoding="utf-8")
         f.write("#EXTM3u\n")
         for track in playlist.items():
             if track.duration and track.grandparentTitle and track.parentTitle is not None:
-                _, filepath = self.__path(track)
+                _, filepath = self.get_path(track)
                 m3u8 = f"#EXTINF:{track.duration // 1000},{track.grandparentTitle} - {track.title}\n#EXT-X-RATING:{track.userRating if track.userRating is not None else 0}\n{filepath}\n"
                 f.write(m3u8)
 

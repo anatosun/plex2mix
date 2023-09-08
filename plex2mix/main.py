@@ -8,6 +8,7 @@ from click_aliases import ClickAliasedGroup
 from plexapi.myplex import MyPlexPinLogin, MyPlexAccount
 from plexapi.server import PlexServer
 from plex2mix.downloader import Downloader
+from plex2mix.itunes import Itunes
 
 
 @ click.group(cls=ClickAliasedGroup)
@@ -19,7 +20,7 @@ def cli(ctx) -> None:
     ctx.obj["config_file"] = f"{os.path.join(click.get_app_dir('plex2mix'), 'config.yaml')}"
     if not os.path.exists(click.get_app_dir('plex2mix')) or not os.path.exists(ctx.obj["config_file"]):
         os.makedirs(click.get_app_dir('plex2mix'), exist_ok=True)
-        yaml.dump(ctx.obj["config"], open(ctx.obj["config_file"], "w"))
+        yaml.dump(ctx.obj["config"], open(ctx.obj²["config_file"], "w"))
 
     with open(ctx.obj["config_file"], "r") as f:
         ctx.obj["config"] = yaml.safe_load(f)
@@ -75,7 +76,8 @@ def cli(ctx) -> None:
 
     ctx.obj["downloader"] = Downloader(
         ctx.obj["server"], ctx.obj["config"]["path"], ctx.obj["config"]["playlists_path"], ctx.obj["config"]["threads"])
-
+    ctx.obj["itunes"] = Itunes(
+        ctx.obj["downloader"], ctx.obj["config"]["server"]["url"], ctx.obj["config"]["path"], ctx.obj["config"]["playlists_path"], ctx.obj["config"]["playlists"]["saved"])
 
 def login(token="") -> PlexServer:
     """Login to Plex"""
@@ -125,7 +127,7 @@ def list(ctx) -> None:
             color = "red"
         else:
             color = "white"
-        click.echo(click.style(f"{i}: {playlist.title}", fg=color))
+        click.echo(click.style(f"{i}: {playlist.title.strip()}", fg=color))
 
 
 @ cli.command()
@@ -169,29 +171,38 @@ def download(ctx, force=False) -> None:
     playlists = ctx.obj["downloader"].get_playlists()
     saved = ctx.obj["config"]["playlists"]["saved"]
     downloader = ctx.obj["downloader"]
+    itunes = ctx.obj["itunes"]
     for p in playlists:
         if p.ratingKey in saved:
             t = downloader.download(p, overwrite=force)
             with click.progressbar(as_completed(t), length=len(t), label=p.title) as bar:
                 for _ in bar:
                     pass
-    # clean tracks without playlists
     if clear:
-        downloadedTracks = downloader.downloadedTracks
-        for (path, directories, files) in os.walk(configPath):
-            for file in files:
-                pathFile = os.path.join(path, file)
-                if pathFile not in downloadedTracks:
-                    os.remove(pathFile)
-    remove_empty_folders(configPath)
+        clean(ctx)
+    click.echo("Generate itunes XML")
+    itunes.dump_itunes_xml()
+
+@ cli.command()
+@ click.pass_context
+def itunes(ctx) -> None:
+    """Generate itunes XML"""
+    click.echo("Generate itunes XML")
+    itunes = ctx.obj["itunes"]
+    itunes.dump_itunes_xml()
 
 @ cli.command()
 @ click.argument('indices',  nargs=-1, type=int)
+@ click.option('-a', '--all', 'enable_all', is_flag=True, help='Enable all playlists')
 @ click.pass_context
-def ignore(ctx, indices=[]) -> None:
+def ignore(ctx, indices=[], enable_all=False) -> None:
     """Ignore playlists"""
     playlists = ctx.obj["downloader"].get_playlists()
     saved, ignored = ctx.obj["config"]["playlists"]["saved"], ctx.obj["config"]["playlists"]["ignored"]
+
+    if enable_all:
+        indices = range(len(playlists))
+
     if len(indices) == 0:
         i = -1
         while i < 0 or i > len(playlists):
@@ -204,7 +215,7 @@ def ignore(ctx, indices=[]) -> None:
             saved.remove(playlist.ratingKey)
         if playlist.ratingKey not in ignored:
             ignored.append(playlist.ratingKey)
-        click.echo(f"Ignored playlist \"{playlist.title}\"")
+        click.echo(f"Ignored playlist \"{playlist.title.strip()}\"")
 
     ctx.obj["config"]["playlists"]["saved"] = saved
     ctx.obj["config"]["playlists"]["ignored"] = ignored
@@ -217,6 +228,27 @@ def config(ctx):
     """Show config"""
     click.echo(f"Configuration file is located at {ctx.obj['config_file']}")
     click.echo(ctx.obj["config"])
+
+def clean(ctx):
+    click.echo('Clean playlists ignored')
+    # clean playlists ignored
+    playlists = ctx.obj["downloader"].get_playlists()
+    saved = ctx.obj["config"]["playlists"]["saved"]
+    configPlaylistsPath = ctx.obj["config"]["playlists_path"]
+    for p in playlists:
+        pathFile = os.path.join(configPlaylistsPath, p.title.strip() + '.m3u8')
+        if p.ratingKey not in saved and os.path.isfile(pathFile):
+            os.remove(pathFile)
+    # clean tracks without playlists
+    click.echo('Clean useless tracks')
+    configPath = ctx.obj["config"]["path"]
+    downloadedTracks = ctx.obj["downloader"].downloadedTracks
+    for (path, directories, files) in os.walk(configPath):
+        for file in files:
+            pathFile = os.path.join(path, file)
+            if pathFile not in downloadedTracks:
+                os.remove(pathFile)
+    remove_empty_folders(configPath)
 
 def remove_empty_folders(path_abs):
     for path, _, _ in os.walk(path_abs, topdown=False):
