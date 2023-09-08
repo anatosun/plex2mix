@@ -1,5 +1,7 @@
 from concurrent.futures import ThreadPoolExecutor
 import os
+import re
+import unicodedata
 from plexapi.server import PlexServer
 from plexapi.playlist import Playlist
 from plexapi.audio import Track
@@ -13,6 +15,7 @@ class Downloader:
         self.path = os.path.expanduser(os.path.join(path))
         self.playlists_path = os.path.expanduser(os.path.join(playlists_path))
         self.pool = ThreadPoolExecutor(max_workers=threads)
+        self.downloadedTracks = []
 
     def get_playlists(self) -> list:
         if self.playlists is None:
@@ -34,12 +37,15 @@ class Downloader:
         else:
             track.download(album_path, keep_original_name=True)
 
+        self.downloadedTracks.append(filepath)
+
         return filepath
 
     def __path(self, track: Track) -> tuple:
         artist, album = track.grandparentTitle, track.parentTitle
-        album_path = os.path.join(self.path, artist, album)
-        _, file = os.path.split(track.media[0].parts[0].file)
+        album_path = os.path.join(
+            self.path, self.__normalize(artist), self.__normalize(album))
+        _, file = os.path.split(self.__normalize(track.media[0].parts[0].file))
         filepath = os.path.join(album_path, file)
         return album_path, filepath
 
@@ -65,3 +71,10 @@ class Downloader:
             tasks.append(future)
         self.pool.submit(self.dump_m3u8, playlist)
         return tasks
+
+    def __normalize(self, path: str):
+        path = unicodedata.normalize('NFKC', path)
+        path = unicodedata.normalize('NFKD', path).encode(
+            'ascii', 'ignore').decode('ascii')
+        path = re.sub(r'[^\w\s-]', '', path)
+        return path

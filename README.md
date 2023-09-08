@@ -71,6 +71,12 @@ At some point, if you modified your playlists on the server you might want to up
 plex2mix refresh
 ```
 
+If you want clear unmapped tracks in downloaded playlists, you can use clear flag
+
+```bash
+plex2mix refresh --clear
+```
+
 For any assistance you can query the help section:
 
 ```console
