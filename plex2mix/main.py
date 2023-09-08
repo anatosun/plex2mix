@@ -4,13 +4,12 @@ import os
 import click
 import yaml
 import time
-from click_aliases import ClickAliasedGroup
 from plexapi.myplex import MyPlexPinLogin, MyPlexAccount
 from plexapi.server import PlexServer
 from plex2mix.downloader import Downloader
 
 
-@ click.group(cls=ClickAliasedGroup)
+@ click.group()
 @ click.pass_context
 def cli(ctx) -> None:
     """plex2mix"""
@@ -158,7 +157,8 @@ def enable(ctx, indices=[], enable_all=False) -> None:
         ctx.obj["config"]["playlists"]["ignored"] = ignored
         ctx.obj["save"]()
 
-@ cli.command(aliases=['refresh'])
+
+@ cli.command()
 @click.option('-f', '--force', is_flag=True, help='Force refresh')
 @ click.option('-c', '--clear', is_flag=True, help='Clear unmapped tracks')
 @ click.pass_context
@@ -184,6 +184,7 @@ def download(ctx, force=False) -> None:
                 if pathFile not in downloadedTracks:
                     os.remove(pathFile)
     remove_empty_folders(configPath)
+
 
 @ cli.command()
 @ click.argument('indices',  nargs=-1, type=int)
@@ -217,6 +218,7 @@ def config(ctx):
     """Show config"""
     click.echo(f"Configuration file is located at {ctx.obj['config_file']}")
     click.echo(ctx.obj["config"])
+
 
 def remove_empty_folders(path_abs):
     for path, _, _ in os.walk(path_abs, topdown=False):
