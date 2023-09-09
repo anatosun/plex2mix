@@ -129,7 +129,7 @@ def list(ctx) -> None:
 
 @ cli.command()
 @ click.argument('indices',  nargs=-1, type=int)
-@ click.option('-a', '--all', 'save_all', is_flag=True, help='Enable all playlists')
+@ click.option('-a', '--all', 'save_all', is_flag=True, help='Save all playlists')
 @ click.pass_context
 def save(ctx, indices=[], save_all=False) -> None:
     """Save playlists to download"""
