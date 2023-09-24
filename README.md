@@ -73,13 +73,17 @@ plex2mix download
 
 If you modified your playlists on the server you might want to update them locally, just execute this command again.
 
-If you want to clear unreferenced tracks, you can use the `clear` flag
+Additionally, you can export your playlists to m3u8 or iTunes XML with the appropriate flags.
+
+```bash
+plex2mix download --m3u8 --itunes
+```
+
+You may also want to clear unreferenced tracks.
 
 ```bash
 plex2mix download --clear
 ```
-
-if you modified your playlists on the server you might want to update them locally, just relaunch this command.
 
 For any assistance you can query the help section:
 
@@ -106,4 +110,4 @@ Most of the information provided on the first execution can be changed by editin
 
 ## Playlists information
 
-Your playlists are downloaded under the specified path. By default, the `m3u8` dumps are stored in the `playlists` subfolder. This option can also be changed in the configuration file.
+Your playlists are downloaded under the specified path. By default, the `m3u8` dumps and the iTunes XML are stored in the `playlists` subfolder. This option can also be changed in the configuration file.
