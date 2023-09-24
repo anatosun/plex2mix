@@ -124,38 +124,31 @@ def list(ctx) -> None:
             color = "red"
         else:
             color = "white"
-        click.echo(click.style(f"{i}: {playlist.title}", fg=color))
+        click.echo(click.style(f"{i}: {playlist.title.strip()}", fg=color))
 
 
 @ cli.command()
 @ click.argument('indices',  nargs=-1, type=int)
-@ click.option('-a', '--all', 'download_all', is_flag=True, help='Download all playlists')
-@click.option('-o', '--overwrite', is_flag=True, help='Overwrite existing files')
+@ click.option('-a', '--all', 'save_all', is_flag=True, help='Save all playlists')
 @ click.pass_context
-def download(ctx, indices=[], download_all=False, overwrite=False) -> None:
-    """Download playlists"""
-    path = ctx.obj["config"]["path"]
-    click.echo(f"Downloading to {path}")
+def save(ctx, indices=[], save_all=False) -> None:
+    """Save playlists to download"""
     playlists = ctx.obj["downloader"].get_playlists()
     saved, ignored = ctx.obj["config"]["playlists"]["saved"], ctx.obj["config"]["playlists"]["ignored"]
-    downloader = ctx.obj["downloader"]
 
-    if download_all:
+    if save_all:
         indices = range(len(playlists))
 
     if len(indices) == 0:
         i = -1
         while i < 0 or i > len(playlists):
-            i = click.prompt("Select playlist to download",
+            i = click.prompt("Select playlist to save",
                              default=0, show_default=False, type=int, show_choices=False, prompt_suffix=f" [0-{len(playlists)-1}]: ")
 
         indices = [i]
 
     for i in indices:
         playlist = playlists[i]
-        if playlist.ratingKey in ignored:
-            continue
-        t = downloader.download(playlist, overwrite=overwrite)
         if playlist.ratingKey not in saved:
             saved.append(playlist.ratingKey)
         if playlist.ratingKey in ignored:
@@ -163,36 +156,39 @@ def download(ctx, indices=[], download_all=False, overwrite=False) -> None:
         ctx.obj["config"]["playlists"]["saved"] = saved
         ctx.obj["config"]["playlists"]["ignored"] = ignored
         ctx.obj["save"]()
-        with click.progressbar(as_completed(t), length=len(t), label=playlist.title) as bar:
-            for _ in bar:
-                pass
 
 
 @ cli.command()
-@ click.option('-f', '--force', is_flag=True, help='Force refresh')
-@ click.option('-c', '--clear', is_flag=True, help='Clear unmapped tracks')
+@click.option('-f', '--force', is_flag=True, help='Force refresh')
+@ click.option('-c', '--clear', is_flag=True, help='Clear unreferenced tracks')
+@click.option('--itunes', 'itunes', is_flag=True, help='Export to iTunes XML')
+@click.option('--m3u8', 'm3u8', is_flag=True, help='Export to m3u8')
 @ click.pass_context
-def refresh(ctx, force=False) -> None:
-    """Refresh playlists"""
-    click.echo("Refresh playlists")
+def download(ctx, force=False, clear=False, m3u8=True, itunes=False) -> None:
+    """Download and refresh playlists"""
+    library = ctx.obj['config']['path']
+    click.echo(f"Download and refresh playlists to {library}")
     playlists = ctx.obj["downloader"].get_playlists()
     saved = ctx.obj["config"]["playlists"]["saved"]
     downloader = ctx.obj["downloader"]
     for p in playlists:
         if p.ratingKey in saved:
-            t = downloader.download(p, overwrite=force)
+            t = downloader.download(
+                p, overwrite=force, dump_m3u8=m3u8, dump_itunes=itunes)
             with click.progressbar(as_completed(t), length=len(t), label=p.title) as bar:
                 for _ in bar:
                     pass
-    # clean tracks without playlists
     if clear:
-        downloadedTracks = downloader.downloadedTracks
-        for (path, directories, files) in os.walk(configPath):
+        downloaded_tracks = downloader.downloaded
+        for (path, _, files) in os.walk(library):
             for file in files:
                 pathFile = os.path.join(path, file)
-                if pathFile not in downloadedTracks:
+                if pathFile not in downloaded_tracks:
                     os.remove(pathFile)
-    remove_empty_folders(configPath)
+        for path, _, _ in os.walk(library, topdown=False):
+            if len(os.listdir(path)) == 0:
+                os.rmdir(path)
+
 
 @ cli.command()
 @ click.argument('indices',  nargs=-1, type=int)
@@ -223,11 +219,6 @@ def ignore(ctx, indices=[]) -> None:
 @cli.command()
 @ click.pass_context
 def config(ctx):
-    """Show config"""
+    """Print config"""
     click.echo(f"Configuration file is located at {ctx.obj['config_file']}")
     click.echo(ctx.obj["config"])
-
-def remove_empty_folders(path_abs):
-    for path, _, _ in os.walk(path_abs, topdown=False):
-        if len(os.listdir(path)) == 0:
-            os.rmdir(path)
