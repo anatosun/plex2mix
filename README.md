@@ -16,7 +16,7 @@ Plexamp team is however very reactive in implementing features, the above mentio
 
 ## Installation
 
-You must clone the repository locally and execute:
+You must clone this repository locally and execute:
 
 ```bash
 python setup.py install --user
@@ -47,16 +47,16 @@ $ plex2mix list
 2: Bad
 ```
 
-You can thereafter pick the ones you wish to enable by providing their indices:
+You can thereafter pick the ones you wish to save by providing their indices:
 
 ```bash
-plex2mix enable 0 1
+plex2mix save 0 1
 ```
 
-You can also choose to enable all the playlists on your server:
+You can also choose to save every playlists on your server:
 
 ```bash
-plex2mix enable --all
+plex2mix save --all
 ```
 
 Now, if you want to exclude a playlist from the above command you can ignore it:
@@ -65,19 +65,18 @@ Now, if you want to exclude a playlist from the above command you can ignore it:
 plex2mix ignore 2
 ```
 
-At some point, you can download playlists and track with:
+After your selection (save/ignore), you can download playlists and track with:
 
 ```bash
 plex2mix download
-plex2mix refresh # is an alias to download
 ```
 
-*if you modified your playlists on the server you might want to update them locally, just relaunch this command.*
+If you modified your playlists on the server you might want to update them locally, just execute this command again.
 
-If you want clear unmapped tracks in downloaded playlists, you can use clear flag
+If you want to clear unreferenced tracks, you can use the `clear` flag
 
 ```bash
-plex2mix refresh --clear
+plex2mix download --clear
 ```
 
 if you modified your playlists on the server you might want to update them locally, just relaunch this command.
@@ -94,10 +93,11 @@ Options:
   --help  Show this message and exit.
 
 Commands:
-  enable    Enable playlists
+  config    Print config
+  download  Download and refresh playlists
   ignore    Ignore playlists
   list      List playlists
-  download|refresh   Download playlists (or refresh)
+  save      Save playlists to download
 ```
 
 ## Configuration

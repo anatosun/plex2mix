@@ -4,14 +4,12 @@ import os
 import click
 import yaml
 import time
-from click_aliases import ClickAliasedGroup
 from plexapi.myplex import MyPlexPinLogin, MyPlexAccount
 from plexapi.server import PlexServer
 from plex2mix.downloader import Downloader
-from plex2mix.itunes import Itunes
 
 
-@ click.group(cls=ClickAliasedGroup)
+@ click.group()
 @ click.pass_context
 def cli(ctx) -> None:
     """plex2mix"""
@@ -20,7 +18,7 @@ def cli(ctx) -> None:
     ctx.obj["config_file"] = f"{os.path.join(click.get_app_dir('plex2mix'), 'config.yaml')}"
     if not os.path.exists(click.get_app_dir('plex2mix')) or not os.path.exists(ctx.obj["config_file"]):
         os.makedirs(click.get_app_dir('plex2mix'), exist_ok=True)
-        yaml.dump(ctx.obj["config"], open(ctx.obj²["config_file"], "w"))
+        yaml.dump(ctx.obj["config"], open(ctx.obj["config_file"], "w"))
 
     with open(ctx.obj["config_file"], "r") as f:
         ctx.obj["config"] = yaml.safe_load(f)
@@ -76,8 +74,7 @@ def cli(ctx) -> None:
 
     ctx.obj["downloader"] = Downloader(
         ctx.obj["server"], ctx.obj["config"]["path"], ctx.obj["config"]["playlists_path"], ctx.obj["config"]["threads"])
-    ctx.obj["itunes"] = Itunes(
-        ctx.obj["downloader"], ctx.obj["config"]["server"]["url"], ctx.obj["config"]["path"], ctx.obj["config"]["playlists_path"], ctx.obj["config"]["playlists"]["saved"])
+
 
 def login(token="") -> PlexServer:
     """Login to Plex"""
@@ -132,20 +129,20 @@ def list(ctx) -> None:
 
 @ cli.command()
 @ click.argument('indices',  nargs=-1, type=int)
-@ click.option('-a', '--all', 'enable_all', is_flag=True, help='Enable all playlists')
+@ click.option('-a', '--all', 'save_all', is_flag=True, help='Save all playlists')
 @ click.pass_context
-def enable(ctx, indices=[], enable_all=False) -> None:
-    """Enable playlists to saved"""
+def save(ctx, indices=[], save_all=False) -> None:
+    """Save playlists to download"""
     playlists = ctx.obj["downloader"].get_playlists()
     saved, ignored = ctx.obj["config"]["playlists"]["saved"], ctx.obj["config"]["playlists"]["ignored"]
 
-    if enable_all:
+    if save_all:
         indices = range(len(playlists))
 
     if len(indices) == 0:
         i = -1
         while i < 0 or i > len(playlists):
-            i = click.prompt("Select playlist to enable",
+            i = click.prompt("Select playlist to save",
                              default=0, show_default=False, type=int, show_choices=False, prompt_suffix=f" [0-{len(playlists)-1}]: ")
 
         indices = [i]
@@ -160,49 +157,46 @@ def enable(ctx, indices=[], enable_all=False) -> None:
         ctx.obj["config"]["playlists"]["ignored"] = ignored
         ctx.obj["save"]()
 
-@ cli.command(aliases=['refresh'])
+
+@ cli.command()
 @click.option('-f', '--force', is_flag=True, help='Force refresh')
-@ click.option('-c', '--clear', is_flag=True, help='Clear unmapped tracks')
+@ click.option('-c', '--clear', is_flag=True, help='Clear unreferenced tracks')
+@click.option('--itunes', 'itunes', is_flag=True, help='Export to iTunes XML')
+@click.option('--m3u8', 'm3u8', is_flag=True, help='Export to m3u8')
 @ click.pass_context
-def download(ctx, force=False) -> None:
-    """Download playlists (or refresh)"""
-    configPath = ctx.obj["config"]["path"]
-    click.echo(f"Download playlists (or refresh) to {configPath}")
+def download(ctx, force=False, clear=False, m3u8=True, itunes=False) -> None:
+    """Download and refresh playlists"""
+    library = ctx.obj['config']['path']
+    click.echo(f"Download and refresh playlists to {library}")
     playlists = ctx.obj["downloader"].get_playlists()
     saved = ctx.obj["config"]["playlists"]["saved"]
     downloader = ctx.obj["downloader"]
-    itunes = ctx.obj["itunes"]
     for p in playlists:
         if p.ratingKey in saved:
-            t = downloader.download(p, overwrite=force)
+            t = downloader.download(
+                p, overwrite=force, dump_m3u8=m3u8, dump_itunes=itunes)
             with click.progressbar(as_completed(t), length=len(t), label=p.title) as bar:
                 for _ in bar:
                     pass
     if clear:
-        clean(ctx)
-    click.echo("Generate itunes XML")
-    itunes.dump_itunes_xml()
+        downloaded_tracks = downloader.downloaded
+        for (path, _, files) in os.walk(library):
+            for file in files:
+                pathFile = os.path.join(path, file)
+                if pathFile not in downloaded_tracks:
+                    os.remove(pathFile)
+        for path, _, _ in os.walk(library, topdown=False):
+            if len(os.listdir(path)) == 0:
+                os.rmdir(path)
 
-@ cli.command()
-@ click.pass_context
-def itunes(ctx) -> None:
-    """Generate itunes XML"""
-    click.echo("Generate itunes XML")
-    itunes = ctx.obj["itunes"]
-    itunes.dump_itunes_xml()
 
 @ cli.command()
 @ click.argument('indices',  nargs=-1, type=int)
-@ click.option('-a', '--all', 'enable_all', is_flag=True, help='Enable all playlists')
 @ click.pass_context
-def ignore(ctx, indices=[], enable_all=False) -> None:
+def ignore(ctx, indices=[]) -> None:
     """Ignore playlists"""
     playlists = ctx.obj["downloader"].get_playlists()
     saved, ignored = ctx.obj["config"]["playlists"]["saved"], ctx.obj["config"]["playlists"]["ignored"]
-
-    if enable_all:
-        indices = range(len(playlists))
-
     if len(indices) == 0:
         i = -1
         while i < 0 or i > len(playlists):
@@ -215,7 +209,7 @@ def ignore(ctx, indices=[], enable_all=False) -> None:
             saved.remove(playlist.ratingKey)
         if playlist.ratingKey not in ignored:
             ignored.append(playlist.ratingKey)
-        click.echo(f"Ignored playlist \"{playlist.title.strip()}\"")
+        click.echo(f"Ignored playlist \"{playlist.title}\"")
 
     ctx.obj["config"]["playlists"]["saved"] = saved
     ctx.obj["config"]["playlists"]["ignored"] = ignored
@@ -225,32 +219,6 @@ def ignore(ctx, indices=[], enable_all=False) -> None:
 @cli.command()
 @ click.pass_context
 def config(ctx):
-    """Show config"""
+    """Print config"""
     click.echo(f"Configuration file is located at {ctx.obj['config_file']}")
     click.echo(ctx.obj["config"])
-
-def clean(ctx):
-    click.echo('Clean playlists ignored')
-    # clean playlists ignored
-    playlists = ctx.obj["downloader"].get_playlists()
-    saved = ctx.obj["config"]["playlists"]["saved"]
-    configPlaylistsPath = ctx.obj["config"]["playlists_path"]
-    for p in playlists:
-        pathFile = os.path.join(configPlaylistsPath, p.title.strip() + '.m3u8')
-        if p.ratingKey not in saved and os.path.isfile(pathFile):
-            os.remove(pathFile)
-    # clean tracks without playlists
-    click.echo('Clean useless tracks')
-    configPath = ctx.obj["config"]["path"]
-    downloadedTracks = ctx.obj["downloader"].downloadedTracks
-    for (path, directories, files) in os.walk(configPath):
-        for file in files:
-            pathFile = os.path.join(path, file)
-            if pathFile not in downloadedTracks:
-                os.remove(pathFile)
-    remove_empty_folders(configPath)
-
-def remove_empty_folders(path_abs):
-    for path, _, _ in os.walk(path_abs, topdown=False):
-        if len(os.listdir(path)) == 0:
-            os.rmdir(path)
