@@ -174,10 +174,11 @@ def download(ctx, force=False, clear=False, m3u8=True, itunes=False) -> None:
     for p in playlists:
         if p.ratingKey in saved:
             t = downloader.download(
-                p, overwrite=force, dump_m3u8=m3u8, dump_itunes=itunes)
+                p, overwrite=force)
             with click.progressbar(as_completed(t), length=len(t), label=p.title) as bar:
                 for _ in bar:
                     pass
+    downloader.export(m3u8=m3u8, itunes=itunes)
     if clear:
         downloaded_tracks = downloader.downloaded
         for (path, _, files) in os.walk(library):

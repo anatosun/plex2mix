@@ -56,14 +56,16 @@ class Downloader:
     def futures(self):
         return self.futures
 
-    def download(self, playlist: Playlist, overwrite=False, dump_m3u8=True, dump_itunes=False) -> list:
+    def download(self, playlist: Playlist, overwrite=False, dump_m3u8=False, dump_itunes=False) -> list:
         tasks = []
         for track in playlist.items():
             future = self.pool.submit(self.__download_track, track, overwrite)
             tasks.append(future)
-        self.pool.submit(self.exporter.proceed, playlist,
-                         dump_m3u8, dump_itunes)
+        self.pool.submit(self.exporter.register, playlist)
         return tasks
+
+    def export(self, dump_m3u8=True, dump_itunes=False) -> None:
+        self.exporter.proceed(dump_m3u8, dump_itunes)
 
     def __normalize_path(self, path: str):
         path = unicodedata.normalize('NFKC', path)

@@ -8,30 +8,33 @@ class Exporter:
 
     def __init__(self, path):
         self.path = path
-        self.exported = set()
+        self.playlists = set()
         self.tracks = set()
 
-    def proceed(self, playlist: Playlist, m3u8=True, itunes=False):
-        if playlist in self.exported:
+    def register(self, playlist: Playlist):
+        if playlist in self.playlists:
             return
-        self.exported.add(playlist)
+        self.playlists.add(playlist)
         self.tracks = self.tracks.union(set(playlist.items()))
+
+    def proceed(self, m3u8=True, itunes=False):
         if m3u8:
-            self.__m3u8(playlist)
+            self.__m3u8()
         if itunes:
-            self.__itunes(playlist)
+            self.__itunes()
 
-    def __m3u8(self, playlist):
-        title = playlist.title.strip()
-        filepath = os.path.join(self.path, f"{title}.m3u8")
-        f = open(filepath, "w", encoding="utf-8")
-        f.write("#EXTM3u\n")
-        for track in playlist.items():
-            if track.duration and track.grandparentTitle and track.parentTitle is not None:
-                m3u8 = f"#EXTINF:{track.duration // 1000},{track.grandparentTitle} - {track.title}\n{track.filepath}\n"
-                f.write(m3u8)
+    def __m3u8(self):
+        for playlist in self.playlists:
+            title = playlist.title.strip()
+            filepath = os.path.join(self.path, f"{title}.m3u8")
+            f = open(filepath, "w", encoding="utf-8")
+            f.write("#EXTM3u\n")
+            for track in playlist.items():
+                if track.duration and track.grandparentTitle and track.parentTitle is not None:
+                    m3u8 = f"#EXTINF:{track.duration // 1000},{track.grandparentTitle} - {track.title}\n{track.filepath}\n"
+                    f.write(m3u8)
 
-    def __itunes(self, playlist):
+    def __itunes(self):
         filename = 'iTunes Music Library.xml'
         filepath = os.path.join(self.path, filename)
         plist: ET.Element
@@ -89,7 +92,7 @@ class Exporter:
         ET.SubElement(plist_element, 'key').text = 'Playlists'
         playlist_element = ET.SubElement(plist_element, 'array')
 
-        for playlist in self.exported:
+        for playlist in self.playlists:
             ET.SubElement(playlist_element, 'key').text = 'Playlist ID'
             ET.SubElement(playlist_element, 'integer').text = str(
                 playlist.ratingKey)
