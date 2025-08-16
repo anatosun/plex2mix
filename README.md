@@ -269,5 +269,6 @@ Most of the information provided on the first execution can be changed by editin
 - Your playlists are downloaded under the specified path.  
 - In **playlist mode**, each playlist is saved into its own subfolder.  
 - In **noplaylist mode**, all tracks are saved into the main library folder.  
-- By default, the `m3u8` dumps and the iTunes XML are stored in the `playlists` subfolder.  
+- By default, the `m3u8` dumps and the iTunes XML are stored in the `playlists` subfolder.
+- By default, the script will check if the files already exist at the specified path dependant on subfolder structure. You can use `--force` to force the files to redownload regardless of already existing.
 - REMINDER MOST OPTIONS CAN BE CHANGED BY DIRECTLY EDITING THE CONFIG FILE
