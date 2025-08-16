@@ -2,7 +2,6 @@ import os
 import xml.etree.ElementTree as ET
 from plexapi.audio import Playlist
 
-
 class Exporter:
     def __init__(self, path):
         self.path = path
@@ -10,14 +9,12 @@ class Exporter:
         self.tracks = set()
 
     def register(self, playlist: Playlist):
-        """Register a playlist and its tracks for export."""
         if playlist in self.playlists:
             return
         self.playlists.add(playlist)
         self.tracks = self.tracks.union(set(playlist.items()))
 
     def proceed(self, m3u8=True, itunes=False):
-        """Export playlists to m3u8 and/or iTunes XML."""
         if m3u8:
             self.__m3u8()
         if itunes:
@@ -30,15 +27,18 @@ class Exporter:
             safe_title = "".join(c for c in title if c.isalnum() or c in " _-").rstrip()
             filepath = os.path.join(self.path, f"{safe_title}.m3u8")
 
-            with open(filepath, "w", encoding="utf-8") as f:
-                f.write("#EXTM3U\n")
+            with open(filepath, "w", encoding="utf-8", newline="\r\n") as f:
+                f.write("#EXTM3U\r\n")
                 for track in list(playlist.items()):
                     if hasattr(track, "filepath") and track.filepath:
                         duration = track.duration // 1000 if track.duration else -1
                         artist = track.grandparentTitle or "Unknown Artist"
                         title = track.title or "Unknown Title"
-                        f.write(f"#EXTINF:{duration},{artist} - {title}\n")
-                        f.write(f"{track.filepath}\n")
+                        f.write(f"#EXTINF:{duration},{artist} - {title}\r\n")
+
+                        # ✅ Use relative path instead of absolute
+                        rel_path = os.path.relpath(track.filepath, start=self.path)
+                        f.write(f"{rel_path}\r\n")
 
     def __itunes(self):
         filename = "iTunes Music Library.xml"
@@ -113,9 +113,9 @@ class Exporter:
                 ET.SubElement(track_element, "integer").text = str(track.ratingKey)
 
         with open(filepath, "wb") as f:
-            f.write('<?xml version="1.0" encoding="UTF-8" ?>\n'.encode("utf8"))
+            f.write('<?xml version="1.0" encoding="UTF-8" ?>\r\n'.encode("utf8"))
             f.write(
                 '<!DOCTYPE plist PUBLIC "-//Apple Computer//DTD PLIST 1.0//EN" '
-                '"http://www.apple.com/DTDs/PropertyList-1.0.dtd">\n'.encode("utf8")
+                '"http://www.apple.com/DTDs/PropertyList-1.0.dtd">\r\n'.encode("utf8")
             )
             ET.ElementTree(plist).write(f, "utf-8")
