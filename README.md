@@ -2,7 +2,7 @@
 
 Plex2Mix is a Plex music downloader geared towards DJs that self-host their music on a Plex server. It allows downloading selected playlists locally on your computer and dump them into `m3u8` files. This is meant to ease the import to DJ software such as Rekordbox, Traktor or Mixxx.
 
-## Why not using Plexamp download feature?
+## Why this instead of using the plex/plexamp download feature?
 
 By the time of writing, several reasons make Plexamp unsuitable for DJs.
 
