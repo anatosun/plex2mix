@@ -4,15 +4,45 @@ import os
 import click
 import yaml
 import time
+import logging
 from plexapi.myplex import MyPlexPinLogin, MyPlexAccount
 from plexapi.server import PlexServer
 from plex2mix.downloader import Downloader
 
 
+logger = logging.getLogger("plex2mix")
+
+
+def setup_logging(debug: bool):
+    if not debug:
+        logging.disable(logging.CRITICAL)
+        return None
+
+    log_file = os.path.join(os.getcwd(), "log.log")
+
+    for handler in logging.root.handlers[:]:
+        logging.root.removeHandler(handler)
+
+    logging.basicConfig(
+        level=logging.DEBUG,
+        format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+        handlers=[
+            logging.FileHandler(log_file, mode="a", encoding="utf-8"),
+        ],
+    )
+    logger.info("Debug logging started (file=%s)", log_file)
+    return log_file
+
+
 @click.group()
+@click.option("--debug", is_flag=True, help="Enable debug logging (writes to log.log)")
 @click.pass_context
-def cli(ctx) -> None:
+def cli(ctx, debug: bool) -> None:
     """plex2mix"""
+    log_file = setup_logging(debug)
+    if debug and log_file:
+        click.echo(f"Debug logging enabled → writing to {log_file}")
+
     ctx.ensure_object(dict)
     ctx.obj["config"] = {}
     ctx.obj["config_file"] = f"{os.path.join(click.get_app_dir('plex2mix'), 'config.yaml')}"
@@ -29,7 +59,6 @@ def cli(ctx) -> None:
         ctx.obj["config"], open(ctx.obj["config_file"], "w")
     )
 
-    # Handle login and server connection
     if "token" not in ctx.obj["config"] or ctx.obj["config"]["token"] == "":
         server = login()
         ctx.obj["server"] = server
@@ -55,7 +84,6 @@ def cli(ctx) -> None:
             exit(1)
     ctx.obj["server"] = server
 
-    # Setup download path
     if ctx.obj["config"].get("path") is None:
         path = click.prompt("Enter path to download to", default="~/Music")
         ctx.obj["config"]["path"] = os.path.expanduser(
@@ -94,9 +122,7 @@ def cli(ctx) -> None:
 
 
 def login(token: str = "") -> PlexServer:
-    """Login to Plex and return a PlexServer instance."""
     if not token:
-        # PIN-based login flow
         login = MyPlexPinLogin()
         pin = login.pin
         click.echo(
@@ -107,11 +133,9 @@ def login(token: str = "") -> PlexServer:
             time.sleep(5)
         token = str(login.token)
 
-    # Use token to create account
     account = MyPlexAccount(token=token)
     click.echo(f"You are logged in as {account.username}")
 
-    # Get available servers
     resources = [r for r in account.resources() if r.provides == "server"]
     if not resources:
         click.echo("No Plex servers found on this account.")
@@ -133,11 +157,9 @@ def login(token: str = "") -> PlexServer:
         click.echo(f"Could not connect to server: {e}", err=True)
         exit(1)
 
-
 @cli.command()
 @click.pass_context
 def list(ctx) -> None:
-    """List playlists"""
     playlists = ctx.obj["downloader"].get_playlists()
     saved, ignored = (
         ctx.obj["config"]["playlists"]["saved"],
@@ -160,7 +182,6 @@ def list(ctx) -> None:
 )
 @click.pass_context
 def save(ctx, indices=[], save_all=False) -> None:
-    """Save playlists to download"""
     playlists = ctx.obj["downloader"].get_playlists()
     saved, ignored = (
         ctx.obj["config"]["playlists"]["saved"],
@@ -212,13 +233,6 @@ def save(ctx, indices=[], save_all=False) -> None:
 )
 @click.pass_context
 def download(ctx, mode, force=False, clear=False, m3u8=True, itunes=False, no_subfolders=False) -> None:
-    """
-    Download and refresh playlists.
-
-    MODE:
-      playlist   Save each playlist into its own subfolder
-      noplaylist Save all tracks into a 'noplaylist' folder with Artist/Album subfolders
-    """
     base_library = ctx.obj["config"]["path"]
     click.echo(f"Download and refresh playlists to {base_library} (mode: {mode})")
 
@@ -236,13 +250,12 @@ def download(ctx, mode, force=False, clear=False, m3u8=True, itunes=False, no_su
                 os.makedirs(playlist_folder, exist_ok=True)
                 target_folder = playlist_folder
                 click.echo(f"Downloading playlist: {p.title} → {playlist_folder}")
-            else:  # noplaylist mode
+            else:  
                 noplaylist_folder = os.path.join(base_library, "noplaylist")
                 os.makedirs(noplaylist_folder, exist_ok=True)
                 target_folder = noplaylist_folder
                 click.echo(f"Downloading playlist: {p.title} → {noplaylist_folder}")
 
-            # Download into the chosen folder
             t = downloader.download(
                 p,
                 overwrite=force,
@@ -274,7 +287,6 @@ def download(ctx, mode, force=False, clear=False, m3u8=True, itunes=False, no_su
 @click.argument("indices", nargs=-1, type=int)
 @click.pass_context
 def ignore(ctx, indices=[]) -> None:
-    """Ignore playlists"""
     playlists = ctx.obj["downloader"].get_playlists()
     saved, ignored = (
         ctx.obj["config"]["playlists"]["saved"],
