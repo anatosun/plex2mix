@@ -218,11 +218,12 @@ Usage: plex2mix [OPTIONS] COMMAND [ARGS]...
   plex2mix
 
 Options:
-  --help  Show this message and exit.
+  --debug  Enable debug logging
+  --help   Show this message and exit.
 
 Commands:
   config    Print config
-  download  Download and refresh playlists
+  download  Download and refresh playlists.
   ignore    Ignore playlists
   list      List playlists
   save      Save playlists to download
