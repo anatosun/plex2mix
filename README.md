@@ -20,8 +20,7 @@ Plexamp team is however very reactive in implementing features, the above mentio
 
 ## Installation
 
-It is recommended to install Plex2Mix inside a **virtual environment** so that
-dependencies do not interfere with your system Python.
+please use a **virtual environment** for the least possible mess while / after setting up
 
 ### 1. Clone the repository
 
@@ -145,7 +144,7 @@ plex2mix ignore 2
 
 ### Downloading Playlists
 
-You can now choose between two modes:
+in this updated we've added two modes for download:
 
 - **`playlist`** → Save each playlist into its own subfolder (default)  
 - **`noplaylist`** → Save all tracks into the main library folder (original behavior)  
