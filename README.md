@@ -122,7 +122,7 @@ Example output:
 
 ### Saving Playlists
 
-Save specific playlists by index:
+Save specific playlists by index # separated by a space:
 
 ```bash
 plex2mix save 0 1
@@ -158,8 +158,6 @@ plex2mix download playlist
 # Save all tracks into the "noplaylist" folder with Artist/Album subfolders
 plex2mix download noplaylist
 ```
-
-#### New Option: `--no-subfolders`
 
 When using `playlist` mode, you can flatten the structure so that all tracks are dumped directly into the playlist folder (no Artist/Album subfolders):
 
