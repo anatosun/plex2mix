@@ -27,20 +27,32 @@ class Downloader:
             return []
         return [p.title for p in self.playlists]
 
-    def __download_track(self, track: Track, overwrite=False, base_path=None) -> str:
+    def __download_track(self, track: Track, overwrite=False, base_path=None, no_subfolders=False) -> str:
         """
-        Download a single track into the given base_path (playlist folder or global library).
+        Download a single track.
+        If no_subfolders=True, dump directly into base_path.
+        Otherwise, create Artist/Album subfolders.
         """
         base_path = base_path or self.path
-        artist, album = track.grandparentTitle, track.parentTitle
-        album_path = os.path.join(
-            base_path,
-            self.__normalize_path(artist),
-            self.__normalize_path(album),
-        )
-        _, file = os.path.split(track.media[0].parts[0].file)
-        file = self.__normalize_path(file)
-        filepath = os.path.join(album_path, file)
+
+        if no_subfolders:
+            # Just dump into the base_path
+            _, file = os.path.split(track.media[0].parts[0].file)
+            file = self.__normalize_path(file)
+            filepath = os.path.join(base_path, file)
+            album_path = base_path
+        else:
+            # Default: Artist/Album subfolders
+            artist, album = track.grandparentTitle, track.parentTitle
+            album_path = os.path.join(
+                base_path,
+                self.__normalize_path(artist),
+                self.__normalize_path(album),
+            )
+            _, file = os.path.split(track.media[0].parts[0].file)
+            file = self.__normalize_path(file)
+            filepath = os.path.join(album_path, file)
+
         size_on_server = track.media[0].parts[0].size
 
         if not hasattr(track, "filepath"):
@@ -68,20 +80,24 @@ class Downloader:
         dump_m3u8=False,
         dump_itunes=False,
         target_folder=None,
+        no_subfolders=False,
     ) -> list:
         """
         Download all tracks in a playlist.
         If target_folder is provided, tracks will be saved under that folder.
-        Otherwise, they go into the global library path.
+        If no_subfolders=True, tracks go directly into target_folder.
         """
         tasks = []
         for track in list(playlist.items()):
             future = self.pool.submit(
-                self.__download_track, track, overwrite, target_folder
+                self.__download_track,
+                track,
+                overwrite,
+                target_folder,
+                no_subfolders,
             )
             tasks.append(future)
 
-        # Register playlist for export
         self.pool.submit(self.exporter.register, playlist)
         return tasks
 

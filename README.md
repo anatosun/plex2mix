@@ -147,18 +147,31 @@ plex2mix ignore 2
 
 You can now choose between two modes:
 
-- **`playlist`** → Save each playlist into its own subfolder (default)  
-- **`noplaylist`** → Save all tracks into the main library folder (original behavior)  
+- **`playlist`** → Save each playlist into its own subfolder  
+- **`noplaylist`** → Save all tracks into a dedicated `noplaylist/` folder with Artist/Album subfolders  
 
 Examples:
 
 ```bash
-# Save each playlist into its own folder
+# Save each playlist into its own folder (default)
 plex2mix download playlist
 
-# Save all tracks into the main library folder
+# Save all tracks into the "noplaylist" folder with Artist/Album subfolders
 plex2mix download noplaylist
 ```
+
+#### New Option: `--no-subfolders`
+
+When using `playlist` mode, you can flatten the structure so that all tracks are dumped directly into the playlist folder (no Artist/Album subfolders):
+
+```bash
+plex2mix download playlist --no-subfolders
+```
+
+Result:
+~/Music/plex2mix/Chill Vibes/track1.mp3
+~/Music/plex2mix/Chill Vibes/track2.mp3
+
 
 Additional options:
 
@@ -171,11 +184,14 @@ plex2mix download playlist --m3u8 --itunes
 
 # Clear unreferenced tracks
 plex2mix download playlist --clear
+
+$ plex2mix download --help
+Usage: plex2mix download [OPTIONS] [MODE]
 ```
 
-Help output:
+Download and refresh playlists.
 
-```console
+```
 $ plex2mix download --help
 Usage: plex2mix download [OPTIONS] [MODE]
 
@@ -183,15 +199,17 @@ Usage: plex2mix download [OPTIONS] [MODE]
 
   MODE:
     playlist   Save each playlist into its own subfolder
-    noplaylist Save all tracks into the main library folder
+    noplaylist Save all tracks into a 'noplaylist' folder with Artist/Album subfolders
 
 Options:
-  -f, --force   Force refresh
-  -c, --clear   Clear unreferenced tracks
-  --itunes      Export to iTunes XML
-  --m3u8        Export to m3u8
-  --help        Show this message and exit.
-```
+  -f, --force        Force refresh
+  -c, --clear        Clear unreferenced tracks
+  --itunes           Export to iTunes XML
+  --m3u8             Export to m3u8
+  --no-subfolders    When in playlist mode, dump all tracks directly into the playlist folder (no Artist/Album subfolders).
+  --help             Show this message and exit.
+ ```
+
 
 ---
 

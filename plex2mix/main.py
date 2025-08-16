@@ -205,14 +205,19 @@ def save(ctx, indices=[], save_all=False) -> None:
 @click.option("-c", "--clear", is_flag=True, help="Clear unreferenced tracks")
 @click.option("--itunes", "itunes", is_flag=True, help="Export to iTunes XML")
 @click.option("--m3u8", "m3u8", is_flag=True, help="Export to m3u8")
+@click.option(
+    "--no-subfolders",
+    is_flag=True,
+    help="When in playlist mode, dump all tracks directly into the playlist folder (no Artist/Album subfolders).",
+)
 @click.pass_context
-def download(ctx, mode, force=False, clear=False, m3u8=True, itunes=False) -> None:
+def download(ctx, mode, force=False, clear=False, m3u8=True, itunes=False, no_subfolders=False) -> None:
     """
     Download and refresh playlists.
 
     MODE:
       playlist   Save each playlist into its own subfolder
-      noplaylist Save all tracks into the main library folder
+      noplaylist Save all tracks into a 'noplaylist' folder with Artist/Album subfolders
     """
     base_library = ctx.obj["config"]["path"]
     click.echo(f"Download and refresh playlists to {base_library} (mode: {mode})")
@@ -224,7 +229,6 @@ def download(ctx, mode, force=False, clear=False, m3u8=True, itunes=False) -> No
     for p in playlists:
         if p.ratingKey in saved:
             if mode == "playlist":
-                # Create a subfolder for this playlist
                 safe_name = "".join(
                     c for c in p.title if c.isalnum() or c in " _-"
                 ).rstrip()
@@ -232,13 +236,19 @@ def download(ctx, mode, force=False, clear=False, m3u8=True, itunes=False) -> No
                 os.makedirs(playlist_folder, exist_ok=True)
                 target_folder = playlist_folder
                 click.echo(f"Downloading playlist: {p.title} → {playlist_folder}")
-            else:
-                # Save directly into the main library folder
-                target_folder = base_library
-                click.echo(f"Downloading playlist: {p.title} → {base_library}")
+            else:  # noplaylist mode
+                noplaylist_folder = os.path.join(base_library, "noplaylist")
+                os.makedirs(noplaylist_folder, exist_ok=True)
+                target_folder = noplaylist_folder
+                click.echo(f"Downloading playlist: {p.title} → {noplaylist_folder}")
 
             # Download into the chosen folder
-            t = downloader.download(p, overwrite=force, target_folder=target_folder)
+            t = downloader.download(
+                p,
+                overwrite=force,
+                target_folder=target_folder,
+                no_subfolders=no_subfolders,
+            )
 
             with click.progressbar(
                 as_completed(t), length=len(t), label=p.title
@@ -246,10 +256,8 @@ def download(ctx, mode, force=False, clear=False, m3u8=True, itunes=False) -> No
                 for _ in bar:
                     pass
 
-    # Export playlists (m3u8/itunes)
     downloader.export(m3u8, itunes)
 
-    # Optionally clear unreferenced tracks
     if clear:
         downloaded_tracks = downloader.downloaded
         for (path, _, files) in os.walk(base_library):
