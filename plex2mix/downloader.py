@@ -1,10 +1,13 @@
 from concurrent.futures import ThreadPoolExecutor
 import os
 import unicodedata
+import logging
 from plexapi.server import PlexServer
 from plexapi.playlist import Playlist
 from plexapi.audio import Track
 from plex2mix.exporter import Exporter
+
+logger = logging.getLogger("plex2mix.downloader")
 
 
 class Downloader:
@@ -28,45 +31,53 @@ class Downloader:
         return [p.title for p in self.playlists]
 
     def __download_track(self, track: Track, overwrite=False, base_path=None, no_subfolders=False) -> str:
-        """
-        Download a single track.
-        If no_subfolders=True, dump directly into base_path.
-        Otherwise, create Artist/Album subfolders.
-        """
         base_path = base_path or self.path
+        logger.debug(f"Preparing to download track: {track.title} (Artist={track.grandparentTitle}, Album={track.parentTitle})")
 
         if no_subfolders:
-            # Just dump into the base_path
-            _, file = os.path.split(track.media[0].parts[0].file)
-            file = self.__normalize_path(file)
-            filepath = os.path.join(base_path, file)
             album_path = base_path
         else:
-            # Default: Artist/Album subfolders
             artist, album = track.grandparentTitle, track.parentTitle
             album_path = os.path.join(
                 base_path,
                 self.__normalize_path(artist),
                 self.__normalize_path(album),
             )
-            _, file = os.path.split(track.media[0].parts[0].file)
-            file = self.__normalize_path(file)
-            filepath = os.path.join(album_path, file)
 
+        os.makedirs(album_path, exist_ok=True)
+
+        _, file = os.path.split(track.media[0].parts[0].file)
+        file = self.__normalize_path(file)
+        filepath = os.path.join(album_path, file)
         size_on_server = track.media[0].parts[0].size
 
-        if not hasattr(track, "filepath"):
-            track.filepath = filepath
-        if not hasattr(track, "album_path"):
-            track.album_path = album_path
+        if os.path.exists(filepath) and not overwrite:
+            local_size = os.path.getsize(filepath)
+            if local_size == size_on_server:
+                logger.debug(f"Skipping track (already exists): {filepath}")
+                track.filepath = filepath
+                track.album_path = album_path
+                self.downloaded.append(filepath)
+                return filepath
+            else:
+                logger.debug(f"File exists but size mismatch (local={local_size}, server={size_on_server}), re-downloading: {filepath}")
 
-        if os.path.exists(filepath):
-            while overwrite or size_on_server > os.path.getsize(filepath):
-                track.download(album_path, keep_original_name=True)
-                overwrite = False
-        else:
+        logger.debug(f"Downloading track to: {filepath}")
+        try:
             track.download(album_path, keep_original_name=True)
+            logger.debug(f"Finished downloading: {filepath}")
+        except Exception as e:
+            logger.error(f"Error downloading {track.title}: {e}")
+            raise
 
+        actual_files = os.listdir(album_path)
+        ext = os.path.splitext(file)[1].lower()
+        candidates = [f for f in actual_files if f.lower().endswith(ext)]
+        if candidates:
+            filepath = os.path.join(album_path, candidates[0])
+
+        track.filepath = filepath
+        track.album_path = album_path
         self.downloaded.append(filepath)
         return filepath
 
@@ -82,13 +93,10 @@ class Downloader:
         target_folder=None,
         no_subfolders=False,
     ) -> list:
-        """
-        Download all tracks in a playlist.
-        If target_folder is provided, tracks will be saved under that folder.
-        If no_subfolders=True, tracks go directly into target_folder.
-        """
+        logger.info(f"Starting download for playlist: {playlist.title} (Tracks={len(playlist.items())})")
         tasks = []
         for track in list(playlist.items()):
+            logger.debug(f"Queueing track: {track.title}")
             future = self.pool.submit(
                 self.__download_track,
                 track,
@@ -102,6 +110,7 @@ class Downloader:
         return tasks
 
     def export(self, dump_m3u8=True, dump_itunes=False) -> None:
+        logger.info("Exporting playlists")
         self.exporter.proceed(dump_m3u8, dump_itunes)
 
     def __normalize_path(self, path: str):
