@@ -29,7 +29,7 @@ class Exporter:
             filepath = os.path.join(self.path, f"{title}.m3u8")
             f = open(filepath, "w", encoding="utf-8")
             f.write("#EXTM3u\n")
-            for track in playlist.items():
+            for track in list(playlist.items()):
                 if track.duration and track.grandparentTitle and track.parentTitle is not None:
                     m3u8 = f"#EXTINF:{track.duration // 1000},{track.grandparentTitle} - {track.title}\n{track.filepath}\n"
                     f.write(m3u8)
@@ -107,7 +107,7 @@ class Exporter:
             ET.SubElement(playlist_element, 'key').text = 'Playlist Items'
 
             tracksElement = ET.SubElement(playlist_element, 'array')
-            for track in playlist.items():
+            for track in list(playlist.items()):
                 track_element = ET.SubElement(tracksElement, 'dict')
                 ET.SubElement(track_element, 'key').text = 'Track ID'
                 ET.SubElement(track_element, 'integer').text = str(

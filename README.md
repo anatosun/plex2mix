@@ -16,76 +16,136 @@ Plexamp team is however very reactive in implementing features, the above mentio
 
 ## Installation
 
-You must clone this repository locally and execute:
+Clone this repository locally and install in editable mode:
 
 ```bash
-python setup.py install --user
+git clone https://github.com/yourusername/plex2mix.git
+cd plex2mix
+pip install -e .
 ```
+
+This will install the `plex2mix` command globally in your environment.
+
+---
+
+## Uninstall
+```bash
+pip uninstall plex2mix -y
+```
+
+---
+
 
 ## Usage
 
-During the first execution of Plex2Mix, you will be prompted to login using the provided PIN. You will be asked where to store you music library and to enter the number of concurrent downloads (number of threads).
+During the first execution of Plex2Mix, you will be prompted to log in using the provided PIN.  
+You will also be asked where to store your music library and how many concurrent downloads (threads) to use.
 
 ```console
 $ plex2mix list
 Please visit https://plex.tv/link and enter the following code: 4VPT
 Waiting for authorization...
-You are logged in as Anatosun
-0:  Server (b95d611c640365fcbd07vf960b19fdadb966c021)
-Select your server [0]:
+You are logged in as YourUser
+0:  Server (string)
+Select your server []:
 Connected to Server
 Enter path to download to [~/Music]:
 Enter number of download threads [4]:
 ```
 
-The next step consists in listing your playlists:
+---
+
+### Listing Playlists
+
+```bash
+plex2mix list
+```
+
+Example output:
 
 ```console
-$ plex2mix list
 0: ❤️ Tracks
 1: All Music
 2: Bad
 ```
 
-You can thereafter pick the ones you wish to save by providing their indices:
+---
+
+### Saving Playlists
+
+Save specific playlists by index:
 
 ```bash
 plex2mix save 0 1
 ```
 
-You can also choose to save every playlists on your server:
+Save all playlists:
 
 ```bash
 plex2mix save --all
 ```
 
-Now, if you want to exclude a playlist from the above command you can ignore it:
+Ignore a playlist:
 
 ```bash
 plex2mix ignore 2
 ```
 
-After your selection (save/ignore), you can download playlists and track with:
+---
+
+### Downloading Playlists
+
+You can now choose between two modes:
+
+- **`playlist`** → Save each playlist into its own subfolder (default)  
+- **`noplaylist`** → Save all tracks into the main library folder (original behavior)  
+
+Examples:
 
 ```bash
-plex2mix download
+# Save each playlist into its own folder
+plex2mix download playlist
+
+# Save all tracks into the main library folder
+plex2mix download noplaylist
 ```
 
-If you modified your playlists on the server you might want to update them locally, just execute this command again.
-
-Additionally, you can export your playlists to m3u8 or iTunes XML with the appropriate flags.
+Additional options:
 
 ```bash
-plex2mix download --m3u8 --itunes
+# Force overwrite existing files
+plex2mix download playlist --force
+
+# Export playlists to M3U8 and iTunes XML
+plex2mix download playlist --m3u8 --itunes
+
+# Clear unreferenced tracks
+plex2mix download playlist --clear
 ```
 
-You may also want to clear unreferenced tracks.
+Help output:
 
-```bash
-plex2mix download --clear
+```console
+$ plex2mix download --help
+Usage: plex2mix download [OPTIONS] [MODE]
+
+  Download and refresh playlists.
+
+  MODE:
+    playlist   Save each playlist into its own subfolder
+    noplaylist Save all tracks into the main library folder
+
+Options:
+  -f, --force   Force refresh
+  -c, --clear   Clear unreferenced tracks
+  --itunes      Export to iTunes XML
+  --m3u8        Export to m3u8
+  --help        Show this message and exit.
 ```
 
-For any assistance you can query the help section:
+---
+
+### Help
 
 ```console
 $ plex2mix --help
@@ -104,10 +164,35 @@ Commands:
   save      Save playlists to download
 ```
 
+And for the `download` command:
+
+```console
+$ plex2mix download --help
+Usage: plex2mix download [OPTIONS] [MODE]
+
+  Download and refresh playlists.
+
+  MODE:
+    playlist   → Save each playlist into its own subfolder
+    noplaylist → Save all tracks into the main library folder
+```
+
+---
+
 ## Configuration
 
-Most of the information provided on the first execution can be changed by editing the `config.yaml` located under `~/.config/plex2mix/` on Linux and under the default location on other operating systems.
+Most of the information provided on the first execution can be changed by editing the `config.yaml` located under:
 
-## Playlists information
+- Linux: `~/.config/plex2mix/config.yaml`  
+- Windows: `%APPDATA%\plex2mix\config.yaml`  
+- macOS: `~/Library/Application Support/plex2mix/config.yaml`
 
-Your playlists are downloaded under the specified path. By default, the `m3u8` dumps and the iTunes XML are stored in the `playlists` subfolder. This option can also be changed in the configuration file.
+---
+
+## Playlists Information
+
+- Your playlists are downloaded under the specified path.  
+- In **playlist mode**, each playlist is saved into its own subfolder.  
+- In **noplaylist mode**, all tracks are saved into the main library folder.  
+- By default, the `m3u8` dumps and the iTunes XML are stored in the `playlists` subfolder.  
+- This option can also be changed in the configuration file.

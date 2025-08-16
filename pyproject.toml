@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "plex2mix"
+version = "0.2.0"
+description = "Export Plex playlists to M3U format"
+readme = "README.md"
+requires-python = ">=3.9"
+authors = [
+  { name = "Anatoliy Tosun", email = "example@example.com" }
+]
+dependencies = [
+  "PlexAPI>=4.15.0",
+  "mutagen>=1.47.0",
+  "requests>=2.32.3",
+  "PyYAML>=6.0.2",
+  "click>=8.1.7",
+  "click-aliases==1.0.1"
+]
+
+[project.scripts]
+plex2mix = "plex2mix.main:cli"
