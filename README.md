@@ -19,7 +19,7 @@ Plexamp team is however very reactive in implementing features, the above mentio
 Clone this repository locally and install in editable mode:
 
 ```bash
-git clone https://github.com/yourusername/plex2mix.git
+git clone https://github.com/raspberryhead/plex2mix.git
 cd plex2mix
 pip install -e .
 ```
