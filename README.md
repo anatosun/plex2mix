@@ -14,17 +14,67 @@ By the time of writing, several reasons make Plexamp unsuitable for DJs.
 
 Plexamp team is however very reactive in implementing features, the above mentioned limitations might not hold in the future.
 
+
+---
+
+
 ## Installation
 
-Clone this repository locally and install in editable mode:
+It is recommended to install Plex2Mix inside a **virtual environment** so that
+dependencies do not interfere with your system Python.
+
+### 1. Clone the repository
 
 ```bash
 git clone https://github.com/raspberryhead/plex2mix.git
 cd plex2mix
+```
+
+### 2. Create and activate a virtual environment
+
+#### Linux / macOS
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+```
+
+#### Windows (PowerShell)
+
+```powershell
+python -m venv .venv
+.venv\Scripts\Activate.ps1
+```
+
+> ⚠️ If you get a security error in PowerShell, run:
+> ```powershell
+> Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+> ```
+
+#### Windows (Command Prompt)
+
+```bat
+python -m venv .venv
+.venv\Scripts\activate.bat
+```
+
+### 3. Install Plex2Mix in editable mode
+
+```bash
 pip install -e .
 ```
 
-This will install the `plex2mix` command globally in your environment.
+This will install the `plex2mix` command into your virtual environment.
+
+---
+
+### 4. Verify installation
+
+```bash
+plex2mix --help
+```
+
+You should see the CLI help output.
 
 ---
 
