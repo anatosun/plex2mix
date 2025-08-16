@@ -63,7 +63,6 @@ python -m venv .venv
 pip install -e .
 ```
 
-This will install the `plex2mix` command into your virtual environment.
 
 ---
 
@@ -94,7 +93,7 @@ You will also be asked where to store your music library and how many concurrent
 $ plex2mix list
 Please visit https://plex.tv/link and enter the following code: 4VPT
 Waiting for authorization...
-You are logged in as YourUser
+You are logged in as *
 0:  Server (string)
 Select your server []:
 Connected to Server
@@ -152,7 +151,7 @@ two arguments for download:
 Examples:
 
 ```bash
-# Saves each playlist into its own folder (default)
+# Saves each playlist into its own folder
 plex2mix download playlist
 
 # Saves all tracks into the "noplaylist" folder with Artist/Album subfolders
@@ -228,8 +227,7 @@ Commands:
   list      List playlists
   save      Save playlists to download
 ```
-
-And for the `download` command:
+there's a separate help menu for the download command as well, since i've added new arguments
 
 ```console
 $ plex2mix download --help
@@ -252,12 +250,3 @@ Most of the information provided on the first execution can be changed by editin
 - Windows: `%APPDATA%\plex2mix\config.yaml`  
 - macOS: `~/Library/Application Support/plex2mix/config.yaml`
 
----
-
-## Playlists Information
-
-- Your playlists are downloaded under the specified path.  
-- In **playlist mode**, each playlist is saved into its own subfolder.  
-- In **noplaylist mode**, all tracks are saved into the main library folder.  
-- By default, the `m3u8` dumps and the iTunes XML are stored in the `playlists` subfolder.  
-- This option can also be changed in the configuration file.
