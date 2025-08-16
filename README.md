@@ -144,7 +144,7 @@ plex2mix ignore 2
 
 ### Downloading Playlists
 
-in this updated we've added two modes for download:
+two arguments for download:
 
 - **`playlist`** → Save each playlist into its own subfolder  
 - **`noplaylist`** → Save all tracks into a dedicated `noplaylist/` folder with Artist/Album subfolders  
