@@ -29,6 +29,16 @@ Plexamp team is however very reactive in implementing features, the above mentio
 
 ## Installation
 
+## From PyPI
+
+The easiest way to install Plex2Mix is using the PyPI package directly:
+
+```
+pip install plex2mix
+```
+
+## Manual installation
+
 You must clone the repository locally and execute:
 
 ```bash
