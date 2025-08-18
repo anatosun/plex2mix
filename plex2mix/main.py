@@ -125,7 +125,255 @@ def login(token: str = "") -> PlexServer:
         sys.exit(1)
 
 
-@click.group()
+def interactive_mode(ctx):
+    """Interactive mode for plex2mix."""
+    click.echo(click.style("🎛️  Welcome to plex2mix Interactive Mode!", fg='green', bold=True))
+    click.echo("Type 'help' for available commands or 'quit' to exit.\n")
+    
+    while True:
+        try:
+            # Show prompt
+            command = click.prompt(click.style("plex2mix", fg='cyan', bold=True) + click.style(" > ", fg='white'), 
+                                 default="", show_default=False).strip()
+            
+            if not command:
+                continue
+                
+            # Handle built-in interactive commands
+            if command.lower() in ['quit', 'exit', 'q']:
+                click.echo(click.style("👋 Goodbye!", fg='yellow'))
+                break
+                
+            elif command.lower() in ['help', 'h', '?']:
+                show_interactive_help()
+                continue
+                
+            elif command.lower() in ['clear', 'cls']:
+                click.clear()
+                show_banner()
+                continue
+            
+            # Parse and execute plex2mix commands
+            try:
+                # Split command into parts
+                parts = command.split()
+                cmd = parts[0].lower()
+                args = parts[1:]
+                
+                logger.debug(f"Interactive mode executing: {cmd} with args: {args}")
+                
+                if cmd == 'list' or cmd == 'ls':
+                    ctx.invoke(list)
+                    
+                elif cmd == 'download' or cmd == 'dl':
+                    # Parse download arguments
+                    indices = []
+                    download_all = False
+                    overwrite = False
+                    
+                    i = 0
+                    while i < len(args):
+                        if args[i] in ['-a', '--all']:
+                            download_all = True
+                        elif args[i] in ['-o', '--overwrite']:
+                            overwrite = True
+                        elif args[i].isdigit():
+                            indices.append(int(args[i]))
+                        i += 1
+                    
+                    # If no indices and not --all, prompt for selection
+                    if not indices and not download_all:
+                        playlists = ctx.obj["downloaders"][0].get_playlists()
+                        if playlists:
+                            # Show playlists first
+                            ctx.invoke(list)
+                            click.echo()
+                            try:
+                                idx = click.prompt("Enter playlist number to download", type=int)
+                                indices = [idx]
+                            except click.Abort:
+                                continue
+                        else:
+                            click.echo("No playlists available")
+                            continue
+                    
+                    # Execute download
+                    if download_all:
+                        playlists = ctx.obj["downloaders"][0].get_playlists()
+                        indices = list(range(len(playlists)))
+                    
+                    if indices:
+                        download_playlists(ctx, indices, overwrite)
+                    
+                elif cmd == 'refresh':
+                    force = '-f' in args or '--force' in args
+                    ctx.invoke(refresh, force=force)
+                    
+                elif cmd == 'ignore':
+                    # Parse ignore arguments
+                    indices = [int(arg) for arg in args if arg.isdigit()]
+                    
+                    if not indices:
+                        playlists = ctx.obj["downloaders"][0].get_playlists()
+                        if playlists:
+                            ctx.invoke(list)
+                            click.echo()
+                            try:
+                                idx = click.prompt("Enter playlist number to ignore", type=int)
+                                indices = [idx]
+                            except click.Abort:
+                                continue
+                        else:
+                            click.echo("No playlists available")
+                            continue
+                    
+                    # Execute ignore
+                    ctx.invoke(ignore, indices=indices)
+                    
+                elif cmd == 'config':
+                    ctx.invoke(config)
+                    
+                elif cmd == 'reset':
+                    ctx.invoke(reset)
+                    
+                elif cmd == 'status':
+                    show_status(ctx)
+                    
+                else:
+                    click.echo(f"Unknown command: {cmd}")
+                    click.echo("Type 'help' for available commands.")
+                    
+            except (ValueError, IndexError) as e:
+                click.echo(f"Invalid command format: {e}")
+                click.echo("Type 'help' for command syntax.")
+            except Exception as e:
+                logger.error(f"Error in interactive mode: {e}")
+                click.echo(f"Error: {e}")
+                
+        except KeyboardInterrupt:
+            click.echo(click.style("\n👋 Goodbye!", fg='yellow'))
+            break
+        except EOFError:
+            click.echo(click.style("\n👋 Goodbye!", fg='yellow'))
+            break
+
+
+def show_interactive_help():
+    """Show help for interactive mode."""
+    help_text = """
+🎵 plex2mix Interactive Mode Commands:
+
+📋 Playlist Management:
+  list, ls                    - List all playlists
+  download [indices] [-a] [-o] - Download playlists (indices: 0 1 2, -a: all, -o: overwrite)
+  refresh [-f]                - Refresh saved playlists (-f: force overwrite)
+  ignore [indices]            - Ignore playlists
+  status                      - Show current status
+
+⚙️  Configuration:
+  config                      - Show current configuration
+  reset                       - Reset configuration
+
+🎛️  Interactive:
+  help, h, ?                  - Show this help
+  clear, cls                  - Clear screen
+  quit, exit, q               - Exit interactive mode
+
+💡 Examples:
+  download 0 1 2              - Download playlists 0, 1, and 2
+  download -a -o              - Download all playlists with overwrite
+  ignore 3                    - Ignore playlist 3
+  refresh -f                  - Force refresh all saved playlists
+"""
+    click.echo(click.style(help_text, fg='cyan'))
+
+
+def show_status(ctx):
+    """Show current plex2mix status."""
+    config = ctx.obj["config"]
+    try:
+        playlists = ctx.obj["downloaders"][0].get_playlists()
+        saved = config["playlists"]["saved"]
+        ignored = config["playlists"]["ignored"]
+        
+        click.echo(click.style("📊 plex2mix Status", fg='cyan', bold=True))
+        click.echo(f"🎵 Total playlists: {len(playlists)}")
+        click.echo(f"💾 Saved playlists: {len(saved)}")
+        click.echo(f"🚫 Ignored playlists: {len(ignored)}")
+        click.echo(f"📁 Download path: {config['path']}")
+        click.echo(f"🎼 Playlist path: {config['playlists_path']}")
+        click.echo(f"📤 Export formats: {', '.join(config['export_formats'])}")
+        click.echo(f"🧵 Download threads: {config['threads']}")
+        click.echo(f"🖥️  Server: {config['server']['name']}")
+        
+    except Exception as e:
+        click.echo(f"Error getting status: {e}")
+
+
+def download_playlists(ctx, indices: List[int], overwrite: bool = False):
+    """Download playlists by indices."""
+    logger.info(f"Starting download for {len(indices)} playlists (overwrite={overwrite})")
+    
+    try:
+        playlists = ctx.obj["downloaders"][0].get_playlists()
+        saved, ignored = ctx.obj["config"]["playlists"]["saved"], ctx.obj["config"]["playlists"]["ignored"]
+
+        for i in indices:
+            if i >= len(playlists):
+                logger.error(f"Invalid playlist index: {i} (max: {len(playlists)-1})")
+                click.echo(f"Invalid playlist index: {i}", err=True)
+                continue
+                
+            playlist = playlists[i]
+            
+            if playlist.ratingKey in ignored:
+                logger.info(f"Skipping ignored playlist: {playlist.title}")
+                click.echo(f"Skipping ignored playlist: {playlist.title}")
+                continue
+
+            logger.info(f"Processing playlist: {playlist.title}")
+            click.echo(f"Processing playlist: {playlist.title}")
+            
+            for downloader in ctx.obj["downloaders"]:
+                try:
+                    logger.debug(f"Starting download with {type(downloader.exporter).__name__}")
+                    tasks = downloader.download(playlist, overwrite=overwrite)
+                    
+                    if tasks:
+                        logger.info(f"Processing {len(tasks)} download tasks")
+                        with click.progressbar(
+                            as_completed(tasks), 
+                            length=len(tasks), 
+                            label=f"{playlist.title} ({downloader.exporter.name})"
+                        ) as bar:
+                            for _ in bar:
+                                pass
+                    else:
+                        logger.warning(f"No tracks to download for {playlist.title}")
+                        click.echo(f"No tracks to download for {playlist.title}")
+                        
+                except Exception as e:
+                    logger.error(f"Error downloading {playlist.title} with {downloader.exporter.name}: {e}")
+                    click.echo(f"Error downloading {playlist.title} with {downloader.exporter.name}: {e}", err=True)
+
+            # Update playlist status
+            if playlist.ratingKey not in saved:
+                saved.append(playlist.ratingKey)
+                logger.debug(f"Added playlist {playlist.title} to saved list")
+            if playlist.ratingKey in ignored:
+                ignored.remove(playlist.ratingKey)
+                logger.debug(f"Removed playlist {playlist.title} from ignored list")
+
+            ctx.obj["save"]()
+            logger.info(f"Completed processing playlist: {playlist.title}")
+            click.echo(f"Completed: {playlist.title}")
+
+    except Exception as e:
+        logger.error(f"Error during download process: {e}")
+        click.echo(f"Error during download: {e}", err=True)
+
+
+@click.group(invoke_without_command=True)
 @click.option("-v", "--verbose", is_flag=True, help="Enable verbose logging")
 @click.pass_context
 def cli(ctx, verbose: bool) -> None:
@@ -234,6 +482,11 @@ def cli(ctx, verbose: bool) -> None:
     ctx.obj["server"] = server
     ctx.obj["save"] = lambda: save_config(config)
     ctx.obj["downloaders"] = downloaders
+    
+    # If no command was invoked, start interactive mode
+    if ctx.invoked_subcommand is None:
+        logger.info("No command specified, starting interactive mode")
+        interactive_mode(ctx)
 
 
 @cli.command()
@@ -267,69 +520,6 @@ def list(ctx) -> None:
     except Exception as e:
         logger.error(f"Error listing playlists: {e}")
         click.echo(f"Error listing playlists: {e}", err=True)
-
-
-def download_playlists(ctx, indices: List[int], overwrite: bool = False):
-    """Download playlists by indices."""
-    logger.info(f"Starting download for {len(indices)} playlists (overwrite={overwrite})")
-    
-    try:
-        playlists = ctx.obj["downloaders"][0].get_playlists()
-        saved, ignored = ctx.obj["config"]["playlists"]["saved"], ctx.obj["config"]["playlists"]["ignored"]
-
-        for i in indices:
-            if i >= len(playlists):
-                logger.error(f"Invalid playlist index: {i} (max: {len(playlists)-1})")
-                click.echo(f"Invalid playlist index: {i}", err=True)
-                continue
-                
-            playlist = playlists[i]
-            
-            if playlist.ratingKey in ignored:
-                logger.info(f"Skipping ignored playlist: {playlist.title}")
-                click.echo(f"Skipping ignored playlist: {playlist.title}")
-                continue
-
-            logger.info(f"Processing playlist: {playlist.title}")
-            click.echo(f"Processing playlist: {playlist.title}")
-            
-            for downloader in ctx.obj["downloaders"]:
-                try:
-                    logger.debug(f"Starting download with {type(downloader.exporter).__name__}")
-                    tasks = downloader.download(playlist, overwrite=overwrite)
-                    
-                    if tasks:
-                        logger.info(f"Processing {len(tasks)} download tasks")
-                        with click.progressbar(
-                            as_completed(tasks), 
-                            length=len(tasks), 
-                            label=f"{playlist.title} ({downloader.exporter.name})"
-                        ) as bar:
-                            for _ in bar:
-                                pass
-                    else:
-                        logger.warning(f"No tracks to download for {playlist.title}")
-                        click.echo(f"No tracks to download for {playlist.title}")
-                        
-                except Exception as e:
-                    logger.error(f"Error downloading {playlist.title} with {downloader.exporter.name}: {e}")
-                    click.echo(f"Error downloading {playlist.title} with {downloader.exporter.name}: {e}", err=True)
-
-            # Update playlist status
-            if playlist.ratingKey not in saved:
-                saved.append(playlist.ratingKey)
-                logger.debug(f"Added playlist {playlist.title} to saved list")
-            if playlist.ratingKey in ignored:
-                ignored.remove(playlist.ratingKey)
-                logger.debug(f"Removed playlist {playlist.title} from ignored list")
-
-            ctx.obj["save"]()
-            logger.info(f"Completed processing playlist: {playlist.title}")
-            click.echo(f"Completed: {playlist.title}")
-
-    except Exception as e:
-        logger.error(f"Error during download process: {e}")
-        click.echo(f"Error during download: {e}", err=True)
 
 
 @cli.command()
