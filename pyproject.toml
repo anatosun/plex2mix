@@ -1,0 +1,69 @@
+[build-system]
+requires = ["setuptools>=45", "wheel", "setuptools_scm[toml]>=6.2"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "plex2mix"
+authors = [
+    {name = "anatosun", email = "z4jyol8l@duck.com"},
+]
+description = "🎵 Plex2Mix - A powerful Plex music downloader designed for DJs and music enthusiasts. Download playlists locally with track deduplication, export to multiple formats (M3U8, JSON, iTunes XML), and manage your music library with an intuitive interactive CLI. Perfect for importing into Rekordbox, Traktor, Mixxx, or iTunes. "
+readme = "README.md"
+license = {text = "GPL-3.0-or-later"}
+requires-python = ">=3.8"
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: End Users/Desktop",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Multimedia :: Sound/Audio",
+    "Topic :: System :: Archiving",
+]
+keywords = ["plex", "music", "dj", "downloader", "playlist", "m3u8", "itunes"]
+dependencies = [
+    "click>=8.0",
+    "plexapi>=4.9",
+    "pyyaml>=6.0",
+]
+dynamic = ["version"]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "pytest-cov>=4.0",
+    "black>=22.0",
+    "flake8>=5.0",
+    "mypy>=1.0",
+    "build>=0.8",
+    "twine>=4.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/anatosun/plex2mix"
+Repository = "https://github.com/anatosun/plex2mix"
+Documentation = "https://github.com/anatosun/plex2mix#readme"
+"Bug Reports" = "https://github.com/anatosun/plex2mix/issues"
+
+[project.scripts]
+plex2mix = "plex2mix.main:cli"
+
+[tool.setuptools]
+packages = ["plex2mix"]
+
+[tool.setuptools_scm]
+write_to = "plex2mix/_version.py"
+
+[tool.black]
+line-length = 88
+target-version = ['py38']
+
+[tool.mypy]
+python_version = "3.8"
+warn_return_any = true
+warn_unused_configs = true
