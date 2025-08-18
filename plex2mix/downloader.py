@@ -1,5 +1,3 @@
-# plex2mix/downloader.py
-
 from concurrent.futures import ThreadPoolExecutor
 import os
 import logging

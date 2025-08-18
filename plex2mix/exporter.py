@@ -1,5 +1,3 @@
-# plex2mix/exporter.py
-
 import json
 import os
 import logging
@@ -9,6 +7,7 @@ from typing import List, Dict, Any, Optional
 
 # Set up logging
 logger = logging.getLogger(__name__)
+
 
 class BaseExporter:
     """Base class for all exporters."""
@@ -24,7 +23,10 @@ class BaseExporter:
 
 class JSONExporter(BaseExporter):
     def export(self, data: List[Dict[str, Any]], **kwargs) -> str:
-        return json.dumps(data, indent=2, ensure_ascii=False)
+        logger.debug(f"JSON Export: Exporting {len(data)} tracks")
+        result = json.dumps(data, indent=2, ensure_ascii=False)
+        logger.info(f"JSON Export: Successfully exported {len(data)} tracks")
+        return result
 
 
 class M3U8Exporter(BaseExporter):
@@ -33,6 +35,8 @@ class M3U8Exporter(BaseExporter):
         Expects data as a list of dicts with at least a 'path' key.
         Returns an M3U8 playlist string.
         """
+        logger.debug(f"M3U8 Export: Exporting {len(data)} tracks")
+        
         lines = ["#EXTM3U"]
         for item in data:
             title = item.get("title", "Unknown")
@@ -43,7 +47,10 @@ class M3U8Exporter(BaseExporter):
             display_title = f"{artist} - {title}" if artist and artist != "Unknown Artist" else title
             lines.append(f"#EXTINF:{duration},{display_title}")
             lines.append(path)
-        return "\n".join(lines)
+        
+        result = "\n".join(lines)
+        logger.info(f"M3U8 Export: Successfully exported {len(data)} tracks")
+        return result
 
 
 class ITunesExporter(BaseExporter):
@@ -59,8 +66,8 @@ class ITunesExporter(BaseExporter):
             raise ValueError("library_path is required for iTunes export")
             
         library_file_path = os.path.join(library_path, self.library_file)
-        print(f"iTunes Export: Processing playlist '{playlist_name}' with {len(data)} tracks")
-        print(f"iTunes Export: Library file: {library_file_path}")
+        logger.info(f"iTunes Export: Processing playlist '{playlist_name}' with {len(data)} tracks")
+        logger.debug(f"iTunes Export: Library file: {library_file_path}")
         
         # Load existing library or create new one
         plist, tracks_dict, playlists_array = self._load_or_create_library(library_file_path)
@@ -75,13 +82,13 @@ class ITunesExporter(BaseExporter):
         # Save library
         self._save_library(library_file_path, plist)
         
-        print(f"iTunes Export: Successfully updated iTunes library")
+        logger.info(f"iTunes Export: Successfully updated iTunes library")
         return f"Updated iTunes library at {library_file_path}"
     
     def _load_or_create_library(self, library_file_path: str) -> tuple:
         """Load existing iTunes library or create a new one."""
         if os.path.exists(library_file_path):
-            print(f"iTunes Export: Loading existing library from {library_file_path}")
+            logger.debug(f"iTunes Export: Loading existing library from {library_file_path}")
             try:
                 tree = parse(library_file_path)
                 plist = tree.getroot()
@@ -119,23 +126,23 @@ class ITunesExporter(BaseExporter):
                         self.track_id_counter = max(track_keys) + 1
                 
                 existing_playlist_count = len(playlists_array.findall('dict')) if playlists_array is not None else 0
-                print(f"iTunes Export: Found {existing_track_count} existing tracks, {existing_playlist_count} existing playlists")
-                print(f"iTunes Export: Next track ID will be {self.track_id_counter}")
+                logger.debug(f"iTunes Export: Found {existing_track_count} existing tracks, {existing_playlist_count} existing playlists")
+                logger.debug(f"iTunes Export: Next track ID will be {self.track_id_counter}")
                 
                 return plist, tracks_dict, playlists_array
                 
             except (ParseError, AttributeError) as e:
-                print(f"iTunes Export: Error parsing existing library: {e}")
-                print(f"iTunes Export: Creating new library")
+                logger.warning(f"iTunes Export: Error parsing existing library: {e}")
+                logger.info(f"iTunes Export: Creating new library")
         else:
-            print(f"iTunes Export: No existing library found, creating new one")
+            logger.debug(f"iTunes Export: No existing library found, creating new one")
         
         # Create new library
         return self._create_new_library()
     
     def _create_new_library(self) -> tuple:
         """Create a new iTunes library structure."""
-        print(f"iTunes Export: Creating new iTunes library structure")
+        logger.debug(f"iTunes Export: Creating new iTunes library structure")
         plist = Element('plist', version="1.0")
         dict_root = SubElement(plist, 'dict')
         
@@ -188,7 +195,7 @@ class ITunesExporter(BaseExporter):
                                         existing_tracks[path] = int(track_id)
                                         break
         
-        print(f"iTunes Export: Found {len(existing_tracks)} existing tracks in library")
+        logger.debug(f"iTunes Export: Found {len(existing_tracks)} existing tracks in library")
         
         new_tracks_added = 0
         existing_tracks_reused = 0
@@ -202,7 +209,7 @@ class ITunesExporter(BaseExporter):
                 track_id = existing_tracks[track_path]
                 track_ids.append(track_id)
                 existing_tracks_reused += 1
-                print(f"iTunes Export: Reusing existing track ID {track_id} for '{track_title}'")
+                logger.debug(f"iTunes Export: Reusing existing track ID {track_id} for '{track_title}'")
                 continue
             
             # Add new track
@@ -211,7 +218,7 @@ class ITunesExporter(BaseExporter):
             track_ids.append(track_id)
             new_tracks_added += 1
             
-            print(f"iTunes Export: Adding new track ID {track_id} for '{track_title}'")
+            logger.debug(f"iTunes Export: Adding new track ID {track_id} for '{track_title}'")
             
             # Track ID as key
             SubElement(tracks_dict, 'key').text = str(track_id)
@@ -238,12 +245,12 @@ class ITunesExporter(BaseExporter):
                 SubElement(track_dict, 'key').text = 'Total Time'
                 SubElement(track_dict, 'integer').text = str(track['duration'] * 1000)  # iTunes uses milliseconds
         
-        print(f"iTunes Export: Added {new_tracks_added} new tracks, reused {existing_tracks_reused} existing tracks")
+        logger.info(f"iTunes Export: Added {new_tracks_added} new tracks, reused {existing_tracks_reused} existing tracks")
         return track_ids
     
     def _add_or_update_playlist(self, playlists_array: Element, playlist_name: str, track_ids: List[int]):
         """Add or update a playlist in the library."""
-        print(f"iTunes Export: Processing playlist '{playlist_name}' with {len(track_ids)} tracks")
+        logger.debug(f"iTunes Export: Processing playlist '{playlist_name}' with {len(track_ids)} tracks")
         
         # Check if playlist already exists
         existing_playlist = None
@@ -264,7 +271,7 @@ class ITunesExporter(BaseExporter):
                 break
         
         if existing_playlist is not None:
-            print(f"iTunes Export: Updating existing playlist '{playlist_name}' (index {playlist_index})")
+            logger.debug(f"iTunes Export: Updating existing playlist '{playlist_name}' (index {playlist_index})")
             
             # Count existing tracks in playlist and remove old items
             old_track_count = 0
@@ -280,13 +287,13 @@ class ITunesExporter(BaseExporter):
                         items_to_remove = [key_elem, value_elem]
                         break
             
-            print(f"iTunes Export: Playlist had {old_track_count} tracks, now will have {len(track_ids)} tracks")
+            logger.debug(f"iTunes Export: Playlist had {old_track_count} tracks, now will have {len(track_ids)} tracks")
             
             # Remove old track items
             for item in items_to_remove:
                 existing_playlist.remove(item)
         else:
-            print(f"iTunes Export: Creating new playlist '{playlist_name}'")
+            logger.debug(f"iTunes Export: Creating new playlist '{playlist_name}'")
             # Create new playlist
             existing_playlist = SubElement(playlists_array, 'dict')
             
@@ -296,7 +303,7 @@ class ITunesExporter(BaseExporter):
             playlist_id = len(playlists_array.findall('dict'))
             SubElement(existing_playlist, 'key').text = 'Playlist ID'
             SubElement(existing_playlist, 'integer').text = str(playlist_id)
-            print(f"iTunes Export: Assigned playlist ID {playlist_id}")
+            logger.debug(f"iTunes Export: Assigned playlist ID {playlist_id}")
         
         # Add track items
         SubElement(existing_playlist, 'key').text = 'Playlist Items'
@@ -307,11 +314,11 @@ class ITunesExporter(BaseExporter):
             SubElement(item_dict, 'key').text = 'Track ID'
             SubElement(item_dict, 'integer').text = str(track_id)
         
-        print(f"iTunes Export: Successfully added {len(track_ids)} track references to playlist")
+        logger.info(f"iTunes Export: Successfully added {len(track_ids)} track references to playlist '{playlist_name}'")
     
     def _save_library(self, library_file_path: str, plist: Element):
         """Save the iTunes library to file with consistent formatting."""
-        print(f"iTunes Export: Saving library to {library_file_path}")
+        logger.debug(f"iTunes Export: Saving library to {library_file_path}")
         
         # Count final stats
         dict_root = plist.find('dict')
@@ -331,129 +338,136 @@ class ITunesExporter(BaseExporter):
                     elif key.tag == 'key' and key.text == 'Playlists' and value.tag == 'array':
                         total_playlists = len(value.findall('dict'))
         
-        print(f"iTunes Export: Final library contains {total_tracks} tracks and {total_playlists} playlists")
+        logger.debug(f"iTunes Export: Final library contains {total_tracks} tracks and {total_playlists} playlists")
         
         # Write XML manually with consistent formatting
-        with open(library_file_path, 'w', encoding='utf-8') as f:
-            f.write('<?xml version="1.0" ?>\n')
-            f.write('<plist version="1.0">\n')
-            f.write('  <dict>\n')
-            
-            # Write library metadata
-            children = list(dict_root)
-            for i in range(0, len(children), 2):
-                if i + 1 < len(children):
-                    key = children[i]
-                    value = children[i + 1]
-                    
-                    if key.tag == 'key' and key.text in ['Major Version', 'Minor Version', 'Application Version']:
-                        f.write(f'    <key>{key.text}</key>\n')
-                        if value.tag == 'integer':
-                            f.write(f'    <integer>{value.text}</integer>\n')
-                        elif value.tag == 'string':
-                            f.write(f'    <string>{value.text}</string>\n')
-            
-            # Write tracks section
-            f.write('    <key>Tracks</key>\n')
-            f.write('    <dict>\n')
-            
-            for i in range(0, len(children), 2):
-                if i + 1 < len(children):
-                    key = children[i]
-                    value = children[i + 1]
-                    
-                    if key.tag == 'key' and key.text == 'Tracks' and value.tag == 'dict':
-                        track_children = list(value)
-                        for j in range(0, len(track_children), 2):
-                            if j + 1 < len(track_children):
-                                track_key = track_children[j]
-                                track_dict = track_children[j + 1]
-                                
-                                if track_key.tag == 'key' and track_dict.tag == 'dict':
-                                    f.write(f'      <key>{track_key.text}</key>\n')
-                                    f.write('      <dict>\n')
+        try:
+            with open(library_file_path, 'w', encoding='utf-8') as f:
+                f.write('<?xml version="1.0" ?>\n')
+                f.write('<plist version="1.0">\n')
+                f.write('  <dict>\n')
+                
+                # Write library metadata
+                children = list(dict_root)
+                for i in range(0, len(children), 2):
+                    if i + 1 < len(children):
+                        key = children[i]
+                        value = children[i + 1]
+                        
+                        if key.tag == 'key' and key.text in ['Major Version', 'Minor Version', 'Application Version']:
+                            f.write(f'    <key>{key.text}</key>\n')
+                            if value.tag == 'integer':
+                                f.write(f'    <integer>{value.text}</integer>\n')
+                            elif value.tag == 'string':
+                                f.write(f'    <string>{value.text}</string>\n')
+                
+                # Write tracks section
+                f.write('    <key>Tracks</key>\n')
+                f.write('    <dict>\n')
+                
+                for i in range(0, len(children), 2):
+                    if i + 1 < len(children):
+                        key = children[i]
+                        value = children[i + 1]
+                        
+                        if key.tag == 'key' and key.text == 'Tracks' and value.tag == 'dict':
+                            track_children = list(value)
+                            for j in range(0, len(track_children), 2):
+                                if j + 1 < len(track_children):
+                                    track_key = track_children[j]
+                                    track_dict = track_children[j + 1]
                                     
-                                    # Write track data
-                                    track_data = list(track_dict)
-                                    for k in range(0, len(track_data), 2):
-                                        if k + 1 < len(track_data):
-                                            data_key = track_data[k]
-                                            data_value = track_data[k + 1]
-                                            
-                                            if data_key.tag == 'key':
-                                                f.write(f'        <key>{data_key.text}</key>\n')
-                                                if data_value.tag == 'integer':
-                                                    f.write(f'        <integer>{data_value.text}</integer>\n')
-                                                elif data_value.tag == 'string':
-                                                    # Escape XML characters
-                                                    escaped_text = data_value.text.replace('&', '&amp;') if data_value.text else ''
-                                                    f.write(f'        <string>{escaped_text}</string>\n')
-                                    
-                                    f.write('      </dict>\n')
-                        break
-            
-            f.write('    </dict>\n')
-            
-            # Write playlists section
-            f.write('    <key>Playlists</key>\n')
-            f.write('    <array>\n')
-            
-            for i in range(0, len(children), 2):
-                if i + 1 < len(children):
-                    key = children[i]
-                    value = children[i + 1]
-                    
-                    if key.tag == 'key' and key.text == 'Playlists' and value.tag == 'array':
-                        for playlist_dict in value.findall('dict'):
-                            f.write('      <dict>\n')
-                            
-                            # Write playlist data
-                            playlist_data = list(playlist_dict)
-                            for j in range(0, len(playlist_data), 2):
-                                if j + 1 < len(playlist_data):
-                                    playlist_key = playlist_data[j]
-                                    playlist_value = playlist_data[j + 1]
-                                    
-                                    if playlist_key.tag == 'key':
-                                        f.write(f'        <key>{playlist_key.text}</key>\n')
+                                    if track_key.tag == 'key' and track_dict.tag == 'dict':
+                                        f.write(f'      <key>{track_key.text}</key>\n')
+                                        f.write('      <dict>\n')
                                         
-                                        if playlist_value.tag == 'string':
-                                            f.write(f'        <string>{playlist_value.text}</string>\n')
-                                        elif playlist_value.tag == 'integer':
-                                            f.write(f'        <integer>{playlist_value.text}</integer>\n')
-                                        elif playlist_value.tag == 'array':
-                                            f.write('        <array>\n')
-                                            
-                                            for item_dict in playlist_value.findall('dict'):
-                                                f.write('          <dict>\n')
+                                        # Write track data
+                                        track_data = list(track_dict)
+                                        for k in range(0, len(track_data), 2):
+                                            if k + 1 < len(track_data):
+                                                data_key = track_data[k]
+                                                data_value = track_data[k + 1]
                                                 
-                                                item_data = list(item_dict)
-                                                for k in range(0, len(item_data), 2):
-                                                    if k + 1 < len(item_data):
-                                                        item_key = item_data[k]
-                                                        item_value = item_data[k + 1]
-                                                        
-                                                        if item_key.tag == 'key':
-                                                            f.write(f'            <key>{item_key.text}</key>\n')
-                                                            if item_value.tag == 'integer':
-                                                                f.write(f'            <integer>{item_value.text}</integer>\n')
-                                                
-                                                f.write('          </dict>\n')
+                                                if data_key.tag == 'key':
+                                                    f.write(f'        <key>{data_key.text}</key>\n')
+                                                    if data_value.tag == 'integer':
+                                                        f.write(f'        <integer>{data_value.text}</integer>\n')
+                                                    elif data_value.tag == 'string':
+                                                        # Escape XML characters
+                                                        escaped_text = data_value.text.replace('&', '&amp;') if data_value.text else ''
+                                                        f.write(f'        <string>{escaped_text}</string>\n')
+                                        
+                                        f.write('      </dict>\n')
+                            break
+                
+                f.write('    </dict>\n')
+                
+                # Write playlists section
+                f.write('    <key>Playlists</key>\n')
+                f.write('    <array>\n')
+                
+                for i in range(0, len(children), 2):
+                    if i + 1 < len(children):
+                        key = children[i]
+                        value = children[i + 1]
+                        
+                        if key.tag == 'key' and key.text == 'Playlists' and value.tag == 'array':
+                            for playlist_dict in value.findall('dict'):
+                                f.write('      <dict>\n')
+                                
+                                # Write playlist data
+                                playlist_data = list(playlist_dict)
+                                for j in range(0, len(playlist_data), 2):
+                                    if j + 1 < len(playlist_data):
+                                        playlist_key = playlist_data[j]
+                                        playlist_value = playlist_data[j + 1]
+                                        
+                                        if playlist_key.tag == 'key':
+                                            f.write(f'        <key>{playlist_key.text}</key>\n')
                                             
-                                            f.write('        </array>\n')
-                            
-                            f.write('      </dict>\n')
-                        break
+                                            if playlist_value.tag == 'string':
+                                                f.write(f'        <string>{playlist_value.text}</string>\n')
+                                            elif playlist_value.tag == 'integer':
+                                                f.write(f'        <integer>{playlist_value.text}</integer>\n')
+                                            elif playlist_value.tag == 'array':
+                                                f.write('        <array>\n')
+                                                
+                                                for item_dict in playlist_value.findall('dict'):
+                                                    f.write('          <dict>\n')
+                                                    
+                                                    item_data = list(item_dict)
+                                                    for k in range(0, len(item_data), 2):
+                                                        if k + 1 < len(item_data):
+                                                            item_key = item_data[k]
+                                                            item_value = item_data[k + 1]
+                                                            
+                                                            if item_key.tag == 'key':
+                                                                f.write(f'            <key>{item_key.text}</key>\n')
+                                                                if item_value.tag == 'integer':
+                                                                    f.write(f'            <integer>{item_value.text}</integer>\n')
+                                                    
+                                                    f.write('          </dict>\n')
+                                                
+                                                f.write('        </array>\n')
+                                
+                                f.write('      </dict>\n')
+                            break
+                
+                f.write('    </array>\n')
+                f.write('  </dict>\n')
+                f.write('</plist>\n')
             
-            f.write('    </array>\n')
-            f.write('  </dict>\n')
-            f.write('</plist>\n')
-        
-        print(f"iTunes Export: Library saved successfully")
+            logger.info(f"iTunes Export: Library saved successfully with {total_tracks} tracks and {total_playlists} playlists")
+            
+        except Exception as e:
+            logger.error(f"iTunes Export: Failed to save library: {e}")
+            raise
 
 
 def get_exporter_by_name(name: str) -> BaseExporter:
     name = name.lower()
+    logger.debug(f"Creating exporter for format: {name}")
+    
     if name == "json":
         return JSONExporter()
     elif name == "m3u8":
@@ -461,4 +475,5 @@ def get_exporter_by_name(name: str) -> BaseExporter:
     elif name in ("itunes", "xml"):
         return ITunesExporter()
     else:
+        logger.error(f"Unknown exporter type: {name}")
         raise ValueError(f"Unknown exporter type: {name}")

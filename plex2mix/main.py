@@ -22,15 +22,22 @@ CONFIG_FILE = CONFIG_DIR / "config.yaml"
 
 def setup_logging(verbose: bool = False):
     """Configure logging for the application."""
-    level = logging.DEBUG if verbose else logging.INFO
-    logging.basicConfig(
-        level=level,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-        handlers=[
-            logging.StreamHandler(sys.stdout)
-        ]
-    )
-    logger.info(f"Logging initialized at level {logging.getLevelName(level)}")
+    if verbose:
+        level = logging.DEBUG
+        logging.basicConfig(
+            level=level,
+            format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+            handlers=[
+                logging.StreamHandler(sys.stdout)
+            ]
+        )
+        logger.info(f"Verbose logging enabled at level {logging.getLevelName(level)}")
+    else:
+        # Disable all logging by setting root logger level very high
+        logging.getLogger().setLevel(logging.CRITICAL + 1)
+        # Also disable logging for all plex2mix modules
+        logging.getLogger('plex2mix').setLevel(logging.CRITICAL + 1)
+        logging.getLogger('__main__').setLevel(logging.CRITICAL + 1)
 
 
 def show_banner():
