@@ -33,6 +33,23 @@ def setup_logging(verbose: bool = False):
     logger.info(f"Logging initialized at level {logging.getLevelName(level)}")
 
 
+def show_banner():
+    """Display the plex2mix ASCII art banner."""
+    banner = """
+    ██████╗ ██╗     ███████╗██╗  ██╗██████╗ ███╗   ███╗██╗██╗  ██╗
+    ██╔══██╗██║     ██╔════╝╚██╗██╔╝╚════██╗████╗ ████║██║╚██╗██╔╝
+    ██████╔╝██║     █████╗   ╚███╔╝  █████╔╝██╔████╔██║██║ ╚███╔╝ 
+    ██╔═══╝ ██║     ██╔══╝   ██╔██╗ ██╔═══╝ ██║╚██╔╝██║██║ ██╔██╗ 
+    ██║     ███████╗███████╗██╔╝ ██╗███████╗██║ ╚═╝ ██║██║██╔╝ ██╗
+    ╚═╝     ╚══════╝╚══════╝╚═╝  ╚═╝╚══════╝╚═╝     ╚═╝╚═╝╚═╝  ╚═╝
+    
+    🎵 Plex Music Downloader for DJs 🎧
+    """
+    click.echo(click.style(banner, fg='cyan', bold=True))
+    click.echo(click.style("    Convert your Plex playlists to DJ-ready formats", fg='yellow'))
+    click.echo()  # Empty line for spacing
+
+
 def load_config() -> Dict[str, Any]:
     logger.debug(f"Loading configuration from {CONFIG_FILE}")
     
@@ -113,6 +130,7 @@ def login(token: str = "") -> PlexServer:
 @click.pass_context
 def cli(ctx, verbose: bool) -> None:
     """plex2mix CLI"""
+    show_banner()
     setup_logging(verbose)
     ctx.ensure_object(dict)
     
