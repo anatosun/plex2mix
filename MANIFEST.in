@@ -1,0 +1,7 @@
+include README.md
+include CHANGELOG.md
+include LICENSE
+include requirements.txt
+recursive-include plex2mix *.py
+recursive-exclude * __pycache__
+recursive-exclude * *.py[co]
