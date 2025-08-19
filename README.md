@@ -254,18 +254,8 @@ Creates individual `.json` files for each playlist containing detailed track met
 
 Creates a single `iTunes Library.xml` file that contains all tracks and playlists. This format:
 
-**Features:**
-
-- **Smart Deduplication**: Tracks are stored once and referenced by multiple playlists
-- **Incremental Updates**: Adding playlists doesn't recreate existing tracks
-- **iTunes Compatibility**: Can be imported directly into iTunes or Music.app
-- **Universal Support**: Works with many music management applications
-- **Persistent Track IDs**: Maintains consistent track references across updates
-
-**How it works:**
-
 - Creates a central track database with unique Track IDs
-- Playlists reference tracks by ID, enabling efficient sharing
+- Playlists reference tracks by ID
 - Updates preserve existing tracks and only add new ones
 - Maintains iTunes-standard XML structure for maximum compatibility
 
@@ -356,7 +346,7 @@ Your downloaded music will be organized as follows:
 ## Requirements
 
 - **Python 3.8+**: Modern Python with type hints support
-- **PlexAPI**: Official Plex API client library
+- **PlexAPI**: Unofficial Plex API client library
 - **Click**: Command-line interface framework
 - **PyYAML**: Configuration file handling
 - **Concurrent.futures**: Built-in threading support
