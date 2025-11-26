@@ -89,13 +89,12 @@ def login(token: str = "") -> PlexServer:
     if not token:
         logger.info("No token provided, starting PIN authentication")
         login_session = MyPlexPinLogin()
-        pin = login_session.pin
-        click.echo(f"Visit https://plex.tv/link and enter the code: {pin}")
+        login_session.run()
+        click.echo(f"Visit https://plex.tv/link and enter the code: {login_session.pin}")
         click.echo("Waiting for authorization...")
-        logger.debug(f"Generated PIN: {pin}")
-        
-        while not login_session.checkLogin():
-            time.sleep(5)
+        logger.debug(f"Generated PIN: {login_session.pin}")
+
+        login_session.waitForLogin()
         token = str(login_session.token)
         logger.info("PIN authentication successful")
 

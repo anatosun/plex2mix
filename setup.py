@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="plex2mix",
-    version="1.0.1",
+    version="1.0.2",
     description="Download Plex playlists and export them to various formats",
     packages=find_packages(),
     author='Anatosun',
