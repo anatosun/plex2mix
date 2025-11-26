@@ -1,8 +1,17 @@
 from setuptools import setup, find_packages
+from pathlib import Path
+
+# Read version from __init__.py
+version = {}
+with open(Path(__file__).parent / "plex2mix" / "__init__.py") as f:
+    for line in f:
+        if line.startswith("__version__"):
+            exec(line, version)
+            break
 
 setup(
     name="plex2mix",
-    version="1.0.2",
+    version=version["__version__"],
     description="Download Plex playlists and export them to various formats",
     packages=find_packages(),
     author='Anatosun',

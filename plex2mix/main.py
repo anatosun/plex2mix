@@ -10,6 +10,7 @@ from typing import Dict, Any, List
 
 from plexapi.myplex import MyPlexPinLogin, MyPlexAccount
 from plexapi.server import PlexServer
+from plex2mix import __version__
 from plex2mix.downloader import Downloader
 from plex2mix.exporter import get_exporter_by_name
 
@@ -381,6 +382,7 @@ def download_playlists(ctx, indices: List[int], overwrite: bool = False):
 
 @click.group(invoke_without_command=True)
 @click.option("-v", "--verbose", is_flag=True, help="Enable verbose logging")
+@click.version_option(version=__version__, prog_name="plex2mix")
 @click.pass_context
 def cli(ctx, verbose: bool) -> None:
     """plex2mix CLI"""
