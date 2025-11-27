@@ -29,7 +29,7 @@ class Downloader:
     def get_playlists(self) -> List[Playlist]:
         """Get all audio playlists from the Plex server."""
         logger.debug("Fetching playlists from Plex server")
-        playlists = [p for p in self.server.playlists() if p.playlistType == 'audio']
+        playlists = [p for p in self.server.playlists() if getattr(p, 'playlistType', None) == 'audio']
         logger.info(f"Found {len(playlists)} audio playlists")
         return playlists
 
