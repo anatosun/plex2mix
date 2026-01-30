@@ -26,6 +26,7 @@ Plexamp team is however very reactive in implementing features, the above mentio
 - **Beautiful CLI**: ASCII art banner and colorful, intuitive interface
 - **Conditional Logging**: Silent by default, verbose logging available for debugging
 - **Smart File Handling**: Automatic directory creation and file organization
+- **MP3 Conversion**: Optional automatic conversion of downloaded audio files to MP3 format using ffmpeg, preserving metadata and album artwork
 
 ## Installation
 
@@ -266,9 +267,12 @@ Most of the information provided on the first execution can be changed by editin
 Example configuration:
 
 ```yaml
+convert_to_mp3: true
 export_formats:
   - m3u8
   - itunes
+mp3_quality: 320k
+mp3_storage_mode: replace
 path: /home/user/Music/plex2mix
 playlists:
   ignored: []
@@ -283,7 +287,13 @@ token: your_plex_token_here
 
 ### Configuration Options
 
+- **convert_to_mp3**: Enable/disable automatic MP3 conversion of downloaded files (requires ffmpeg, preserves metadata and artwork)
 - **export_formats**: List of formats to export (m3u8, json, itunes)
+- **mp3_quality**: Quality setting for MP3 conversion (e.g., "320k", "256k", "192k", or VBR like "V2")
+- **mp3_storage_mode**: How to handle original files during conversion
+  - `replace`: Replace original files with MP3 (saves space)
+  - `separate`: Keep originals and put MP3s in 'converted' subdirectory
+  - `keep_both`: Keep both original and MP3 in same directory
 - **path**: Base directory for downloaded music
 - **playlists_path**: Directory for playlist files
 - **threads**: Number of concurrent download threads
@@ -306,6 +316,11 @@ Your downloaded music will be organized as follows:
 │   └── Album Name/           # Then by album
 │       ├── 01 Track Name.flac
 │       └── 02 Another Track.flac
+├── converted/                # MP3 files when using 'separate' storage mode
+│   └── Artist Name/
+│       └── Album Name/
+│           ├── 01 Track Name.mp3
+│           └── 02 Another Track.mp3
 └── Another Artist/
     └── Album/
         └── Track.mp3

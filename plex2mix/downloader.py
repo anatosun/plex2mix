@@ -5,7 +5,7 @@ from plexapi.server import PlexServer
 from plexapi.playlist import Playlist
 from plexapi.audio import Track
 from pathlib import Path
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 
 # Set up logging
 logger = logging.getLogger(__name__)
@@ -14,17 +14,20 @@ logger = logging.getLogger(__name__)
 class Downloader:
     """Handles downloading audio tracks from Plex playlists."""
 
-    def __init__(self, server: PlexServer, path: str, playlists_path: str, threads: int = 4, exporter=None) -> None:
+    def __init__(self, server: PlexServer, path: str, playlists_path: str, threads: int = 4, exporter=None, converter=None) -> None:
         self.server = server
         self.path = os.path.expanduser(path)
         self.playlists_path = os.path.expanduser(playlists_path)
         self.pool = ThreadPoolExecutor(max_workers=threads)
         self.exporter = exporter
+        self.converter = converter
         logger.info(f"Initialized downloader with {threads} threads")
         logger.info(f"Music path: {self.path}")
         logger.info(f"Playlists path: {self.playlists_path}")
         if self.exporter:
             logger.info(f"Using exporter: {type(self.exporter).__name__}")
+        if self.converter:
+            logger.info(f"Using converter: {type(self.converter).__name__}")
 
     def get_playlists(self) -> List[Playlist]:
         """Get all audio playlists from the Plex server."""
@@ -64,6 +67,24 @@ class Downloader:
         else:
             logger.info(f"Downloading '{track_name}'")
             track.download(album_path, keep_original_name=True)
+
+        # Convert to MP3 if converter is available
+        if self.converter:
+            try:
+                original_filepath = filepath
+                converted_filepath = self.converter.convert_to_mp3(filepath)
+                
+                # If conversion was successful and created a new file, update filepath
+                if converted_filepath != filepath:
+                    # Optionally remove original file after successful conversion
+                    # For now, we'll keep the original file as backup
+                    logger.debug(f"Converted {filepath} to {converted_filepath}")
+                    filepath = converted_filepath
+                    
+            except Exception as e:
+                logger.error(f"Failed to convert '{track_name}' to MP3: {e}")
+                # Continue with original file if conversion fails
+                logger.warning(f"Using original file for '{track_name}' due to conversion failure")
 
         return filepath
 

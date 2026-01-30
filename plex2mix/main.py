@@ -13,6 +13,7 @@ from plexapi.server import PlexServer
 from plex2mix import __version__
 from plex2mix.downloader import Downloader
 from plex2mix.exporter import get_exporter_by_name
+from plex2mix.converter import AudioConverter
 
 # Set up logging
 logger = logging.getLogger(__name__)
@@ -291,6 +292,8 @@ def show_interactive_help():
   download -a -o              - Download all playlists with overwrite
   ignore 3                    - Ignore playlist 3
   refresh -f                  - Force refresh all saved playlists
+
+🎵 Note: Downloaded files will be automatically converted to MP3 if conversion is enabled in config (preserves metadata and album artwork).
 """
     click.echo(click.style(help_text, fg='cyan'))
 
@@ -312,6 +315,14 @@ def show_status(ctx):
         click.echo(f"📤 Export formats: {', '.join(config['export_formats'])}")
         click.echo(f"🧵 Download threads: {config['threads']}")
         click.echo(f"🖥️  Server: {config['server']['name']}")
+        
+        # Show MP3 conversion status
+        if config.get("convert_to_mp3"):
+            quality = config.get("mp3_quality", "320k")
+            storage_mode = config.get("mp3_storage_mode", "replace")
+            click.echo(f"🎵 MP3 conversion: Enabled ({quality}, {storage_mode})")
+        else:
+            click.echo(f"🎵 MP3 conversion: Disabled")
         
     except Exception as e:
         click.echo(f"Error getting status: {e}")
@@ -446,6 +457,30 @@ def cli(ctx, verbose: bool) -> None:
         save_config(config)
         logger.info(f"Export formats set to: {config['export_formats']}")
 
+    # Setup MP3 conversion
+    convert_to_mp3 = config.get("convert_to_mp3")
+    if convert_to_mp3 is None:
+        logger.info("MP3 conversion not configured, prompting user")
+        convert = click.confirm("Convert downloaded files to MP3 format?", default=False)
+        config["convert_to_mp3"] = convert
+        if convert:
+            quality = click.prompt("MP3 quality (bitrate, e.g., 320k, 256k, 192k)", default="320k")
+            config["mp3_quality"] = quality
+            
+            # Ask about storage mode
+            click.echo("Choose how to handle original files:")
+            click.echo("  replace: Replace original files with MP3 (saves space)")
+            click.echo("  separate: Keep originals and put MP3s in 'converted' folder")
+            click.echo("  keep_both: Keep both original and MP3 in same folder")
+            storage_mode = click.prompt("Storage mode", default="replace", 
+                                      type=click.Choice(["replace", "separate", "keep_both"]))
+            config["mp3_storage_mode"] = storage_mode
+        save_config(config)
+        logger.info(f"MP3 conversion set to: {config['convert_to_mp3']}")
+        if config.get("convert_to_mp3"):
+            logger.info(f"MP3 quality set to: {config['mp3_quality']}")
+            logger.info(f"MP3 storage mode set to: {config['mp3_storage_mode']}")
+
     # Create directories
     path = Path(config["path"]).expanduser()
     path.mkdir(parents=True, exist_ok=True)
@@ -460,6 +495,20 @@ def cli(ctx, verbose: bool) -> None:
     Path(config["playlists_path"]).mkdir(parents=True, exist_ok=True)
     logger.debug(f"Ensured playlists directory exists: {config['playlists_path']}")
 
+    # Create converter if MP3 conversion is enabled
+    converter = None
+    if config.get("convert_to_mp3"):
+        try:
+            quality = config.get("mp3_quality", "320k")
+            storage_mode = config.get("mp3_storage_mode", "replace")
+            converter = AudioConverter(quality=quality, storage_mode=storage_mode)
+            logger.info(f"Created MP3 converter with quality: {quality}, storage: {storage_mode}")
+        except RuntimeError as e:
+            logger.error(f"Failed to create MP3 converter: {e}")
+            click.echo(f"Warning: {e}", err=True)
+            config["convert_to_mp3"] = False
+            save_config(config)
+
     # Create downloaders for each export format
     downloaders = []
     logger.info(f"Creating downloaders for {len(config['export_formats'])} export formats")
@@ -472,7 +521,8 @@ def cli(ctx, verbose: bool) -> None:
                 config["path"],
                 config["playlists_path"],
                 config["threads"],
-                exporter=exporter
+                exporter=exporter,
+                converter=converter
             )
             downloaders.append(downloader)
             logger.debug(f"Created downloader for format: {fmt}")
